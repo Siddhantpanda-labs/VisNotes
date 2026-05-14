@@ -118,7 +118,19 @@ class _EditableNotePageState extends State<EditableNotePage> with SingleTickerPr
         final pageIndex = currentState.activePageIndex;
         
         if (textBlock != null) {
-          _textController.content = textBlock.content;
+          if (_textController.content != textBlock.content) {
+            _textController.content = textBlock.content;
+            
+            // CRITICAL: Force the invisible TextField to rebuild its internal hit-test layout!
+            // Without this, making text larger updates the visual canvas, but the invisible
+            // tap-target layer remains the old size, causing severe offset misalignment.
+            _isProgrammaticUpdate = true;
+            _textController.value = TextEditingValue(
+              text: textBlock.content.plainText,
+              selection: _textController.selection,
+            );
+            _isProgrammaticUpdate = false;
+          }
         }
 
         // Maintain focus if we are in select mode and this is the active page
@@ -281,15 +293,36 @@ class _EditableNotePageState extends State<EditableNotePage> with SingleTickerPr
                                   final prevPageIdx = widget.pageIndex - 1;
                                   final prevPage = state.document.pages[prevPageIdx];
                                   final prevBlock = prevPage.blocks.whereType<TextBlock>().firstOrNull;
+                                  
+                                  context.read<NoteEditorBloc>().add(UpdateNoteText(
+                                    text: (prevBlock?.content.plainText ?? '') + text,
+                                    pageIndex: prevPageIdx,
+                                    blockId: prevBlock?.id ?? '',
+                                  ));
+                                  
                                   context.read<NoteEditorBloc>().add(UpdateSelection(
                                     selection: TextSelection.collapsed(offset: prevBlock?.content.plainText.length ?? 0),
                                     pageIndex: prevPageIdx,
                                   ));
+
+                                  // Cleanup: Remove current page text since it was merged
+                                  context.read<NoteEditorBloc>().add(UpdateNoteText(
+                                    text: '',
+                                    pageIndex: widget.pageIndex,
+                                    blockId: textBlock.id,
+                                  ));
+
                                   return KeyEventResult.handled;
                                 }
 
-                                // RIGHT / DOWN at the very end -> NEXT page
-                                if ((event.logicalKey == LogicalKeyboardKey.arrowRight || event.logicalKey == LogicalKeyboardKey.arrowDown) && 
+                                // ENTER at the bottom margin -> NEXT page
+                                if (event.logicalKey == LogicalKeyboardKey.enter) {
+                                  // The Pagination Engine handles the split automatically
+                                  // through the NoteEditorBloc._onUpdateText logic.
+                                }
+
+                                // RIGHT at the very end -> NEXT page
+                                if (event.logicalKey == LogicalKeyboardKey.arrowRight && 
                                     offset == text.length && 
                                     widget.pageIndex < state.document.pages.length - 1) {
                                   context.read<NoteEditorBloc>().add(UpdateSelection(
@@ -322,6 +355,7 @@ class _EditableNotePageState extends State<EditableNotePage> with SingleTickerPr
                             maxLines: null,
                             scrollPhysics: const NeverScrollableScrollPhysics(),
                             decoration: const InputDecoration(
+                              isCollapsed: true, // RAW Engine feel
                               border: InputBorder.none,
                               contentPadding: EdgeInsets.zero,
                               isDense: true,
@@ -335,7 +369,13 @@ class _EditableNotePageState extends State<EditableNotePage> with SingleTickerPr
                               height: 1.2,
                               letterSpacing: 0.0,
                             ),
-                            cursorColor: Colors.transparent, // HIDE NATIVE CURSOR
+                            strutStyle: const StrutStyle(
+                              fontFamily: 'Roboto',
+                              fontSize: 16, // Lock the baseline grid!
+                              height: 1.2,
+                              forceStrutHeight: false,
+                            ),
+                            cursorColor: Colors.transparent, // We draw our own
                             onChanged: (value) {
                               context.read<NoteEditorBloc>().add(UpdateNoteText(
                                     text: value,

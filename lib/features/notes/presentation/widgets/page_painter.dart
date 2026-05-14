@@ -110,6 +110,13 @@ class PagePainter extends CustomPainter {
         }).toList(),
       ),
       textDirection: TextDirection.ltr,
+      textAlign: TextAlign.left,
+      strutStyle: const StrutStyle(
+        fontFamily: 'Roboto',
+        fontSize: 16, // Lock the baseline grid!
+        height: 1.2,
+        forceStrutHeight: false,
+      ),
     );
     textPainter.layout(maxWidth: block.size.width);
     textPainter.paint(canvas, Offset.zero);

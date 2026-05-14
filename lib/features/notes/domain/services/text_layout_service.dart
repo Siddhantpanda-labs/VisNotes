@@ -38,12 +38,19 @@ class TextLayoutService {
               fontSize: segment.isHeading ? (segment.fontSize ?? 24) : (segment.fontSize ?? 16),
               color: segment.color,
               letterSpacing: 0.0,
+              height: 1.2,
             ),
           );
         }).toList(),
       ),
       textDirection: TextDirection.ltr,
       textAlign: TextAlign.left,
+      strutStyle: const StrutStyle(
+        fontFamily: 'Roboto',
+        fontSize: 16, // Lock the baseline grid!
+        height: 1.2,
+        forceStrutHeight: false,
+      ),
     );
     tp.layout(maxWidth: maxWidth);
     return tp;
