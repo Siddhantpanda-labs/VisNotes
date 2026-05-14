@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/entities/note_block.dart';
 import '../../domain/entities/note_document.dart';
@@ -62,25 +63,39 @@ class _EditableNotePageState extends State<EditableNotePage> with SingleTickerPr
     }
   }
 
+  bool _isProgrammaticUpdate = false;
+
+  @override
+  void didUpdateWidget(EditableNotePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.page != oldWidget.page) {
+      final textBlock = widget.page.blocks.whereType<TextBlock>().firstOrNull;
+      if (textBlock != null && textBlock.content.plainText != _textController.text) {
+        _isProgrammaticUpdate = true;
+        // Save current selection before updating text to prevent cursor jumps
+        final currentSelection = _textController.selection;
+        _textController.text = textBlock.content.plainText;
+        _textController.content = textBlock.content;
+        
+        // Restore selection safely
+        if (currentSelection.isValid && currentSelection.extentOffset <= _textController.text.length) {
+          _textController.selection = currentSelection;
+        } else {
+          _textController.selection = TextSelection.collapsed(offset: _textController.text.length);
+        }
+        _isProgrammaticUpdate = false;
+      }
+    }
+  }
+
   void _onSelectionChanged() {
+    if (_isProgrammaticUpdate) return;
+    
     if (_focusNode.hasFocus) {
       context.read<NoteEditorBloc>().add(UpdateSelection(
             selection: _textController.selection,
             pageIndex: widget.pageIndex,
           ));
-    }
-  }
-
-  @override
-  void didUpdateWidget(EditableNotePage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    final textBlock = widget.page.blocks.whereType<TextBlock>().firstOrNull;
-    if (textBlock != null && textBlock.content.plainText != _textController.text) {
-      final oldSelection = _textController.selection;
-      _textController.text = textBlock.content.plainText;
-      try {
-        _textController.selection = oldSelection;
-      } catch (_) {}
     }
   }
 
@@ -108,6 +123,11 @@ class _EditableNotePageState extends State<EditableNotePage> with SingleTickerPr
 
         // Maintain focus if we are in select mode and this is the active page
         if (!isPenMode && pageIndex == widget.pageIndex) {
+          if (selection != null && selection.isValid && _textController.selection != selection) {
+            _isProgrammaticUpdate = true;
+            try { _textController.selection = selection; } catch (_) {}
+            _isProgrammaticUpdate = false;
+          }
           if (!_focusNode.hasFocus && _textController.text.isNotEmpty) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) _focusNode.requestFocus();
@@ -115,13 +135,13 @@ class _EditableNotePageState extends State<EditableNotePage> with SingleTickerPr
           }
         }
 
+        final layoutService = TextLayoutService();
+        
         // Calculate custom caret metrics and selection rects
         CaretMetrics? caretMetrics;
         List<Rect>? selectionRects;
         
         if (!isPenMode && selection != null && pageIndex == widget.pageIndex) {
-          final layoutService = TextLayoutService();
-          final textBlock = widget.page.blocks.whereType<TextBlock>().firstOrNull;
           if (textBlock != null) {
             if (selection.isCollapsed) {
               caretMetrics = layoutService.getCaretMetrics(
@@ -142,8 +162,19 @@ class _EditableNotePageState extends State<EditableNotePage> with SingleTickerPr
           }
         }
 
+        const double fixedPageHeight = 1056.0; // Standard professional height (approx A4)
+
         return Listener(
           onPointerDown: (event) {
+            // Switch active page on click
+            if (pageIndex != widget.pageIndex) {
+              context.read<NoteEditorBloc>().add(UpdateSelection(
+                selection: _textController.selection,
+                pageIndex: widget.pageIndex,
+              ));
+              _focusNode.requestFocus();
+            }
+
             if (isPenMode) {
               context.read<NoteEditorBloc>().add(StartStroke(
                     position: event.localPosition,
@@ -165,21 +196,25 @@ class _EditableNotePageState extends State<EditableNotePage> with SingleTickerPr
               context.read<NoteEditorBloc>().add(const EndStroke());
             }
           },
-          child: Stack(
-            children: [
-              // Visual Layer
-              CustomPaint(
-                size: Size(widget.page.width, widget.page.height),
-                painter: PagePainter(
-                  page: widget.page,
-                  selection: selection,
-                  selectionRects: selectionRects,
-                  caretOffset: caretMetrics?.offset,
-                  caretHeight: caretMetrics?.height,
-                  isCaretVisible: _isCaretVisible && _focusNode.hasFocus,
-                  showGrid: widget.showGrid,
+          child: Container(
+            width: widget.page.width,
+            height: fixedPageHeight,
+            color: Colors.white,
+            child: Stack(
+              children: [
+                // Visual Layer
+                CustomPaint(
+                  size: Size(widget.page.width, fixedPageHeight),
+                  painter: PagePainter(
+                    page: widget.page,
+                    selection: selection,
+                    selectionRects: selectionRects,
+                    caretOffset: caretMetrics?.offset,
+                    caretHeight: caretMetrics?.height,
+                    isCaretVisible: _isCaretVisible && _focusNode.hasFocus,
+                    showGrid: widget.showGrid,
+                  ),
                 ),
-              ),
 
               // Active Ink Layer (Drawing currently)
               if (currentState.currentStroke != null && pageIndex == widget.pageIndex)
@@ -211,7 +246,7 @@ class _EditableNotePageState extends State<EditableNotePage> with SingleTickerPr
                   left: textBlock.position.dx,
                   top: textBlock.position.dy,
                   width: textBlock.size.width,
-                  height: textBlock.size.height,
+                  height: fixedPageHeight - textBlock.position.dy - 40.0, // Strict 40px bottom margin
                   child: IgnorePointer(
                     ignoring: isPenMode, // Disable text interaction in pen mode
                     child: Builder(builder: (context) {
@@ -227,42 +262,142 @@ class _EditableNotePageState extends State<EditableNotePage> with SingleTickerPr
                             selectionHandleColor: Colors.transparent,
                           ),
                         ),
-                        child: TextField(
-                          controller: _textController,
-                          focusNode: _focusNode,
-                          maxLines: null,
-                          decoration: const InputDecoration(
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.zero,
-                            isDense: true,
-                          ),
-                          style: TextStyle(
-                            fontFamily: 'Roboto',
-                            fontSize: fontSize,
-                            fontWeight: fontWeight,
-                            fontStyle: fontStyle,
-                            color: Colors.transparent, // Invisible text
-                            height: 1.2,
-                            letterSpacing: 0.0,
-                          ),
-                          cursorColor: Colors.transparent, // HIDE NATIVE CURSOR
-                          onChanged: (value) {
-                            context.read<NoteEditorBloc>().add(UpdateNoteText(
-                                  text: value,
-                                  pageIndex: widget.pageIndex,
-                                  blockId: textBlock.id,
-                                ));
+                        child: Focus(
+                          onKey: (node, event) {
+                            if (event is RawKeyDownEvent) {
+                              final text = _textController.text;
+                              final offset = _textController.selection.extentOffset;
+                              final state = context.read<NoteEditorBloc>().state;
+                              
+                              if (state is NoteEditorLoaded) {
+                                // BACKSPACE at the very start -> Magnetically pull back to previous page
+                                if (event.logicalKey == LogicalKeyboardKey.backspace && 
+                                    offset == 0 && 
+                                    widget.pageIndex > 0) {
+                                  final prevPageIdx = widget.pageIndex - 1;
+                                  final prevPage = state.document.pages[prevPageIdx];
+                                  final prevBlock = prevPage.blocks.whereType<TextBlock>().firstOrNull;
+                                  context.read<NoteEditorBloc>().add(UpdateSelection(
+                                    selection: TextSelection.collapsed(offset: prevBlock?.content.plainText.length ?? 0),
+                                    pageIndex: prevPageIdx,
+                                  ));
+                                  return KeyEventResult.handled;
+                                }
+
+                                // RIGHT / DOWN at the very end -> NEXT page
+                                if ((event.logicalKey == LogicalKeyboardKey.arrowRight || event.logicalKey == LogicalKeyboardKey.arrowDown) && 
+                                    offset == text.length && 
+                                    widget.pageIndex < state.document.pages.length - 1) {
+                                  context.read<NoteEditorBloc>().add(UpdateSelection(
+                                    selection: const TextSelection.collapsed(offset: 0),
+                                    pageIndex: widget.pageIndex + 1,
+                                  ));
+                                  return KeyEventResult.handled;
+                                }
+
+                                // LEFT / UP at the very start -> PREVIOUS page
+                                if ((event.logicalKey == LogicalKeyboardKey.arrowLeft || event.logicalKey == LogicalKeyboardKey.arrowUp) && 
+                                    offset == 0 && 
+                                    widget.pageIndex > 0) {
+                                  final prevPageIdx = widget.pageIndex - 1;
+                                  final prevPage = state.document.pages[prevPageIdx];
+                                  final prevBlock = prevPage.blocks.whereType<TextBlock>().firstOrNull;
+                                  context.read<NoteEditorBloc>().add(UpdateSelection(
+                                    selection: TextSelection.collapsed(offset: prevBlock?.content.plainText.length ?? 0),
+                                    pageIndex: prevPageIdx,
+                                  ));
+                                  return KeyEventResult.handled;
+                                }
+                              }
+                            }
+                            return KeyEventResult.ignored;
                           },
+                          child: TextField(
+                            controller: _textController,
+                            focusNode: _focusNode,
+                            maxLines: null,
+                            scrollPhysics: const NeverScrollableScrollPhysics(),
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.zero,
+                              isDense: true,
+                            ),
+                            style: TextStyle(
+                              fontFamily: 'Roboto',
+                              fontSize: fontSize,
+                              fontWeight: fontWeight,
+                              fontStyle: fontStyle,
+                              color: Colors.transparent, // Invisible text
+                              height: 1.2,
+                              letterSpacing: 0.0,
+                            ),
+                            cursorColor: Colors.transparent, // HIDE NATIVE CURSOR
+                            onChanged: (value) {
+                              context.read<NoteEditorBloc>().add(UpdateNoteText(
+                                    text: value,
+                                    pageIndex: widget.pageIndex,
+                                    blockId: textBlock.id,
+                                  ));
+                            },
+                          ),
                         ),
                       );
                     }),
                   ),
                 ),
-            ],
+
+              // Caret Tracker for Auto-Scroll
+              if (caretMetrics != null)
+                Positioned(
+                  left: textBlock!.position.dx + caretMetrics.offset.dx,
+                  top: textBlock.position.dy + caretMetrics.offset.dy,
+                  child: const _CaretTracker(),
+                ),
+              ],
+            ),
           ),
         );
       },
     );
+  }
+}
+
+class _CaretTracker extends StatefulWidget {
+  const _CaretTracker();
+
+  @override
+  State<_CaretTracker> createState() => _CaretTrackerState();
+}
+
+class _CaretTrackerState extends State<_CaretTracker> {
+  @override
+  void initState() {
+    super.initState();
+    _ensureVisible();
+  }
+
+  @override
+  void didUpdateWidget(_CaretTracker oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _ensureVisible();
+  }
+
+  void _ensureVisible() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        Scrollable.ensureVisible(
+          context,
+          duration: const Duration(milliseconds: 100),
+          curve: Curves.easeOut,
+          alignment: 0.8, // Keep it towards the bottom of the screen
+        );
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(width: 1, height: 24);
   }
 }
 

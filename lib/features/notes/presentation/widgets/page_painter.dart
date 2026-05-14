@@ -27,14 +27,14 @@ class PagePainter extends CustomPainter {
     final paint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.fill;
-    canvas.drawRect(Rect.fromLTWH(0, 0, page.width, page.height), paint);
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
 
     // 2. Draw Shadow/Border
     final borderPaint = Paint()
       ..color = Colors.black12
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
-    canvas.drawRect(Rect.fromLTWH(0, 0, page.width, page.height), borderPaint);
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), borderPaint);
 
     if (showGrid) {
       _drawGrid(canvas, size);

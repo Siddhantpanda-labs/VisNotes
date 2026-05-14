@@ -71,9 +71,76 @@ class NoteEditorBloc extends Bloc<NoteEditorEvent, NoteEditorState> {
     newBlocks[blockIndex] = oldBlock.copyWith(content: updatedContent);
     newPages[event.pageIndex] = page.copyWith(blocks: newBlocks);
 
-    _handlePagination(newPages, event.pageIndex);
+    // --- PRO PAGINATION ENGINE ---
+    int finalPageIndex = event.pageIndex;
+    TextSelection? finalSelection = currentState.selection;
+    
+    // We need to track where the selection actually ended up after overflow
+    if (finalSelection != null) {
+      int currentOffset = finalSelection.extentOffset;
+      
+      // Iterate through pages and handle overflow while tracking selection
+      for (int i = event.pageIndex; i < newPages.length; i++) {
+        final p = newPages[i];
+        final tBlocks = p.blocks.whereType<TextBlock>().toList();
+        if (tBlocks.isEmpty) break;
+        
+        final mBlock = tBlocks.first;
+        final result = _layoutService.layoutRichText(
+          content: mBlock.content,
+          maxWidth: p.width - mBlock.position.dx * 2,
+          maxHeight: 1056.0 - mBlock.position.dy - 40.0, // Strict 40px bottom margin
+          defaultStyle: const TextStyle(fontFamily: 'Roboto', fontSize: 16, letterSpacing: 0.0),
+        );
 
-    emit(currentState.copyWith(document: doc.copyWith(pages: newPages, updatedAt: DateTime.now())));
+        final uBlocks = List<NoteBlock>.from(p.blocks);
+        final mIdx = uBlocks.indexOf(mBlock);
+        uBlocks[mIdx] = mBlock.copyWith(content: result.fittingContent);
+        newPages[i] = p.copyWith(blocks: uBlocks);
+
+        final fittingLength = result.fittingContent.plainText.length;
+
+        if (result.remainingContent != null && result.remainingContent!.plainText.isNotEmpty) {
+          // If the selection was in the overflow part, it moves to next page
+          if (i == finalPageIndex && currentOffset > fittingLength) {
+            finalPageIndex = i + 1;
+            currentOffset -= fittingLength;
+            finalSelection = TextSelection.collapsed(offset: currentOffset);
+          } else if (i < finalPageIndex) {
+            // If we are before the active page, any overflow here pushes the selection offset
+            // (Standard document flow logic)
+          }
+
+          // Handle the actual content move
+          if (i + 1 < newPages.length) {
+            final nPage = newPages[i + 1];
+            final nTBlocks = nPage.blocks.whereType<TextBlock>().toList();
+            if (nTBlocks.isNotEmpty) {
+              final nMain = nTBlocks.first;
+              final nBlocks = List<NoteBlock>.from(nPage.blocks);
+              final nIdx = nBlocks.indexOf(nMain);
+              final merged = RichTextContent(segments: [...result.remainingContent!.segments, ...nMain.content.segments]).normalized();
+              nBlocks[nIdx] = nMain.copyWith(content: merged);
+              newPages[i + 1] = nPage.copyWith(blocks: nBlocks);
+            } else {
+              newPages[i + 1] = nPage.copyWith(blocks: [...nPage.blocks, TextBlock(id: _uuid.v4(), position: mBlock.position, size: mBlock.size, content: result.remainingContent!)]);
+            }
+          } else {
+            newPages.add(NotePage(id: _uuid.v4(), blocks: [TextBlock(id: _uuid.v4(), position: mBlock.position, size: mBlock.size, content: result.remainingContent!)], width: p.width, height: p.height));
+          }
+        } else {
+          // No more overflow, we can stop
+          break;
+        }
+      }
+    }
+
+    _lastTextLength = newText.length;
+    emit(currentState.copyWith(
+      document: doc.copyWith(pages: newPages, updatedAt: DateTime.now()),
+      selection: finalSelection,
+      activePageIndex: finalPageIndex,
+    ));
   }
 
   RichTextContent _deleteFromContent(RichTextContent content, int index, int count) {
@@ -100,20 +167,42 @@ class NoteEditorBloc extends Bloc<NoteEditorEvent, NoteEditorState> {
 
     TextSegment newAttributes = currentState.activeTypingAttributes;
     
+    int finalPageIndex = event.pageIndex;
+    TextSelection finalSelection = event.selection;
+
     if (selectionMoved && !textChanged) {
-      // This is a manual move (click/arrows). FLUSH attributes to match context.
-      if (textBlock != null && event.selection.isCollapsed) {
-        final offset = event.selection.extentOffset;
+      // PRO ARROW-KEY PAGE JUMPING
+      final textLength = textBlock?.content.plainText.length ?? 0;
+      
+      // Jump DOWN to next page
+      if (event.selection.extentOffset == textLength && 
+          currentState.selection?.extentOffset == textLength &&
+          event.pageIndex < doc.pages.length - 1) {
+        finalPageIndex = event.pageIndex + 1;
+        finalSelection = const TextSelection.collapsed(offset: 0);
+      }
+      
+      // Jump UP to previous page
+      else if (event.selection.extentOffset == 0 && 
+               currentState.selection?.extentOffset == 0 &&
+               event.pageIndex > 0) {
+        finalPageIndex = event.pageIndex - 1;
+        final prevPage = doc.pages[finalPageIndex];
+        final prevBlock = prevPage.blocks.whereType<TextBlock>().firstOrNull;
+        finalSelection = TextSelection.collapsed(offset: prevBlock?.content.plainText.length ?? 0);
+      }
+      
+      // Context-aware attribute update
+      if (textBlock != null && finalSelection.isCollapsed) {
+        final offset = finalSelection.extentOffset;
         newAttributes = textBlock.content.getAttributesAt(offset > 0 ? offset - 1 : 0);
       }
     }
 
-    // Always update track of length
     _lastTextLength = currentTextLength;
-
     emit(currentState.copyWith(
-      selection: event.selection, 
-      activePageIndex: event.pageIndex,
+      selection: finalSelection,
+      activePageIndex: finalPageIndex,
       activeTypingAttributes: newAttributes,
     ));
   }
@@ -211,42 +300,5 @@ class NoteEditorBloc extends Bloc<NoteEditorEvent, NoteEditorState> {
   void _onChangeTool(ChangeTool event, Emitter<NoteEditorState> emit) {
     if (state is! NoteEditorLoaded) return;
     emit((state as NoteEditorLoaded).copyWith(activeTool: event.tool));
-  }
-
-  void _handlePagination(List<NotePage> pages, int startPageIndex) {
-    for (int i = startPageIndex; i < pages.length; i++) {
-      final page = pages[i];
-      final textBlocks = page.blocks.whereType<TextBlock>().toList();
-      if (textBlocks.isEmpty) continue;
-      final mainBlock = textBlocks.first;
-      final result = _layoutService.layoutRichText(
-        content: mainBlock.content,
-        maxWidth: page.width - mainBlock.position.dx * 2,
-        maxHeight: page.height - mainBlock.position.dy,
-        defaultStyle: const TextStyle(fontFamily: 'Roboto', fontSize: 16, letterSpacing: 0.0),
-      );
-      final updatedBlocks = List<NoteBlock>.from(page.blocks);
-      final mainBlockIndex = updatedBlocks.indexOf(mainBlock);
-      updatedBlocks[mainBlockIndex] = mainBlock.copyWith(content: result.fittingContent);
-      pages[i] = page.copyWith(blocks: updatedBlocks);
-      if (result.remainingContent != null && result.remainingContent!.plainText.isNotEmpty) {
-        if (i + 1 < pages.length) {
-          final nextPage = pages[i + 1];
-          final nextTextBlocks = nextPage.blocks.whereType<TextBlock>().toList();
-          if (nextTextBlocks.isNotEmpty) {
-            final nextMainBlock = nextTextBlocks.first;
-            final nextBlocks = List<NoteBlock>.from(nextPage.blocks);
-            final nextMainIndex = nextBlocks.indexOf(nextMainBlock);
-            final mergedContent = RichTextContent(segments: [...result.remainingContent!.segments, ...nextMainBlock.content.segments]).normalized();
-            nextBlocks[nextMainIndex] = nextMainBlock.copyWith(content: mergedContent);
-            pages[i + 1] = nextPage.copyWith(blocks: nextBlocks);
-          } else {
-            pages[i + 1] = nextPage.copyWith(blocks: [...nextPage.blocks, TextBlock(id: _uuid.v4(), position: mainBlock.position, size: mainBlock.size, content: result.remainingContent!)]);
-          }
-        } else {
-          pages.add(NotePage(id: _uuid.v4(), blocks: [TextBlock(id: _uuid.v4(), position: mainBlock.position, size: mainBlock.size, content: result.remainingContent!)], width: page.width, height: page.height));
-        }
-      } else break;
-    }
   }
 }
