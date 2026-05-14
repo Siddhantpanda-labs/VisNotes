@@ -4,26 +4,37 @@ import '../../domain/entities/note_document.dart';
 
 class PagePainter extends CustomPainter {
   final NotePage page;
+  final TextSelection? selection;
+  final List<Rect>? selectionRects;
+  final Offset? caretOffset;
+  final double? caretHeight;
+  final bool isCaretVisible;
   final bool showGrid;
 
   PagePainter({
     required this.page,
+    this.selection,
+    this.selectionRects,
+    this.caretOffset,
+    this.caretHeight,
+    this.isCaretVisible = false,
     this.showGrid = true,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     // 1. Draw Page Background
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, page.width, page.height),
-      Paint()..color = Colors.white,
-    );
+    final paint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    canvas.drawRect(Rect.fromLTWH(0, 0, page.width, page.height), paint);
 
-    // 2. Draw Shadow/Border (Optional for visual depth)
+    // 2. Draw Shadow/Border
     final borderPaint = Paint()
-      ..color = Colors.grey.withOpacity(0.3)
-      ..style = PaintingStyle.stroke;
-    canvas.drawRect(Offset.zero & size, borderPaint);
+      ..color = Colors.black12
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    canvas.drawRect(Rect.fromLTWH(0, 0, page.width, page.height), borderPaint);
 
     if (showGrid) {
       _drawGrid(canvas, size);
@@ -66,6 +77,17 @@ class PagePainter extends CustomPainter {
   }
 
   void _drawTextBlock(Canvas canvas, TextBlock block) {
+    // 1. Draw Selection Highlights (Behind text)
+    if (selectionRects != null && selectionRects!.isNotEmpty) {
+      final selectionPaint = Paint()
+        ..color = Colors.blue.withOpacity(0.2)
+        ..style = PaintingStyle.fill;
+      for (final rect in selectionRects!) {
+        canvas.drawRect(rect, selectionPaint);
+      }
+    }
+
+    // 2. Draw Text
     final textPainter = TextPainter(
       text: TextSpan(
         children: block.content.segments.map((segment) {
@@ -87,6 +109,15 @@ class PagePainter extends CustomPainter {
     );
     textPainter.layout(maxWidth: block.size.width);
     textPainter.paint(canvas, Offset.zero);
+
+    // 3. Draw Custom Caret (On top)
+    if (isCaretVisible && caretOffset != null && caretHeight != null) {
+      final caretPaint = Paint()
+        ..color = Colors.blue
+        ..strokeWidth = 2.0;
+      
+      canvas.drawLine(caretOffset!, caretOffset! + Offset(0, caretHeight!), caretPaint);
+    }
   }
 
   void _drawCanvasBlock(Canvas canvas, CanvasBlock block) {
@@ -113,6 +144,10 @@ class PagePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant PagePainter oldDelegate) {
-    return oldDelegate.page != page || oldDelegate.showGrid != showGrid;
+    return oldDelegate.page != page || 
+           oldDelegate.showGrid != showGrid || 
+           oldDelegate.selection != selection ||
+           oldDelegate.caretOffset != caretOffset ||
+           oldDelegate.isCaretVisible != isCaretVisible;
   }
 }
