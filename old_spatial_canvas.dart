@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'editable_note_page.dart';
 import '../../domain/entities/note_document.dart';
@@ -27,13 +27,17 @@ class _SpatialCanvasState extends State<SpatialCanvas> {
       builder: (context, state) {
         if (state is NoteEditorLoaded) {
           final document = state.document;
-
+          
           return Container(
             color: const Color(0xFFF5F5F7), // Apple/Premium Studio Background
             child: SingleChildScrollView(
               controller: _scrollController,
               padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
-              child: Center(child: Column(children: _buildPages(document))),
+              child: Center(
+                child: Column(
+                  children: _buildPages(document),
+                ),
+              ),
             ),
           );
         }
@@ -48,11 +52,9 @@ class _SpatialCanvasState extends State<SpatialCanvas> {
     return document.pages.asMap().entries.map<Widget>((entry) {
       final index = entry.key;
       final page = entry.value;
-
+      
       return Padding(
-        padding: EdgeInsets.only(
-          bottom: index == document.pages.length - 1 ? 0 : spacing,
-        ),
+        padding: EdgeInsets.only(bottom: index == document.pages.length - 1 ? 0 : spacing),
         child: Container(
           decoration: BoxDecoration(
             boxShadow: [

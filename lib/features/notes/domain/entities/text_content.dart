@@ -171,6 +171,47 @@ class RichTextContent extends Equatable {
     return RichTextContent(segments: remaining).normalized();
   }
 
+  RichTextContent applyFormat(int start, int end, {bool? isBold, bool? isItalic, bool? isHeading}) {
+    if (start >= end) return this;
+    
+    final List<TextSegment> newSegments = [];
+    int currentOffset = 0;
+    
+    for (final segment in segments) {
+      final segmentEnd = currentOffset + segment.text.length;
+      
+      if (segmentEnd <= start || currentOffset >= end) {
+        // Entirely outside
+        newSegments.add(segment);
+      } else {
+        // Partially or entirely inside
+        final overlapStart = start > currentOffset ? start - currentOffset : 0;
+        final overlapEnd = end < segmentEnd ? end - currentOffset : segment.text.length;
+        
+        // Before overlap
+        if (overlapStart > 0) {
+          newSegments.add(segment.copyWith(text: segment.text.substring(0, overlapStart)));
+        }
+        
+        // The overlap part
+        newSegments.add(segment.copyWith(
+          text: segment.text.substring(overlapStart, overlapEnd),
+          isBold: isBold ?? segment.isBold,
+          isItalic: isItalic ?? segment.isItalic,
+          isHeading: isHeading ?? segment.isHeading,
+        ));
+        
+        // After overlap
+        if (overlapEnd < segment.text.length) {
+          newSegments.add(segment.copyWith(text: segment.text.substring(overlapEnd)));
+        }
+      }
+      currentOffset += segment.text.length;
+    }
+    
+    return RichTextContent(segments: newSegments).normalized();
+  }
+
   @override
   List<Object?> get props => [segments];
 }

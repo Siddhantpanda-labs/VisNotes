@@ -24,15 +24,17 @@ class UpdateNoteText extends NoteEditorEvent {
   final String text;
   final int pageIndex;
   final String blockId;
+  final TextSelection? selection;
 
   const UpdateNoteText({
     required this.text,
     required this.pageIndex,
     required this.blockId,
+    this.selection,
   });
 
   @override
-  List<Object?> get props => [text, pageIndex, blockId];
+  List<Object?> get props => [text, pageIndex, blockId, selection];
 }
 
 class StartStroke extends NoteEditorEvent {
@@ -106,6 +108,10 @@ class UpdateSelection extends NoteEditorEvent {
 
   @override
   List<Object?> get props => [selection, pageIndex];
+}
+
+class SaveNote extends NoteEditorEvent {
+  const SaveNote();
 }
 
 abstract class NoteEditorState extends Equatable {
