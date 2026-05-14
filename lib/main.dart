@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'features/notes/data/repositories/note_repository.dart';
 import 'features/notes/presentation/bloc/dashboard/dashboard_bloc.dart';
 import 'features/notes/presentation/pages/notes_dashboard_page.dart';
+import 'features/notes/presentation/pages/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,7 +34,7 @@ class VisNotesApp extends StatelessWidget {
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
             useMaterial3: true,
           ),
-          home: const NotesDashboardPage(),
+          home: const SplashScreen(),
         ),
       ),
     );

@@ -15,7 +15,7 @@ extension GetIsarNoteDocumentCollection on Isar {
 
 const IsarNoteDocumentSchema = CollectionSchema(
   name: r'IsarNoteDocument',
-  id: -3330625021260316957,
+  id: 1,
   properties: {
     r'createdAt': PropertySchema(
       id: 0,
@@ -66,7 +66,7 @@ const IsarNoteDocumentSchema = CollectionSchema(
   idName: r'isarId',
   indexes: {
     r'id': IndexSchema(
-      id: -3268401673993471357,
+      id: 2,
       name: r'id',
       unique: true,
       replace: true,
@@ -1512,7 +1512,7 @@ extension GetIsarFolderCollection on Isar {
 
 const IsarFolderSchema = CollectionSchema(
   name: r'IsarFolder',
-  id: -7805229368695537870,
+  id: 3,
   properties: {
     r'childFolderIds': PropertySchema(
       id: 0,
@@ -1552,7 +1552,7 @@ const IsarFolderSchema = CollectionSchema(
   idName: r'isarId',
   indexes: {
     r'id': IndexSchema(
-      id: -3268401673993471357,
+      id: 4,
       name: r'id',
       unique: true,
       replace: true,
@@ -3017,7 +3017,7 @@ extension IsarFolderQueryProperty
 
 const IsarNotePageSchema = Schema(
   name: r'IsarNotePage',
-  id: -8718705821563969345,
+  id: 5,
   properties: {
     r'blocks': PropertySchema(
       id: 0,
@@ -3516,7 +3516,7 @@ extension IsarNotePageQueryObject
 
 const IsarNoteBlockSchema = Schema(
   name: r'IsarNoteBlock',
-  id: -4650197352798817991,
+  id: 6,
   properties: {
     r'height': PropertySchema(
       id: 0,
@@ -4540,7 +4540,7 @@ extension IsarNoteBlockQueryObject
 
 const IsarRichTextContentSchema = Schema(
   name: r'IsarRichTextContent',
-  id: -2321256125225349946,
+  id: 7,
   properties: {
     r'segments': PropertySchema(
       id: 0,
@@ -4731,7 +4731,7 @@ extension IsarRichTextContentQueryObject on QueryBuilder<IsarRichTextContent,
 
 const IsarTextSegmentSchema = Schema(
   name: r'IsarTextSegment',
-  id: 5261452143247117120,
+  id: 8,
   properties: {
     r'colorValue': PropertySchema(
       id: 0,
@@ -5156,7 +5156,7 @@ extension IsarTextSegmentQueryObject
 
 const IsarStrokeSchema = Schema(
   name: r'IsarStroke',
-  id: -2749912407320495654,
+  id: 9,
   properties: {
     r'colorValue': PropertySchema(
       id: 0,
@@ -5645,7 +5645,7 @@ extension IsarStrokeQueryObject
 
 const IsarPointSchema = Schema(
   name: r'IsarPoint',
-  id: -4063623505548704747,
+  id: 10,
   properties: {
     r'x': PropertySchema(
       id: 0,
