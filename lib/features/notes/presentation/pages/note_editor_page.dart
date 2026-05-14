@@ -79,11 +79,13 @@ class NoteEditorPage extends StatelessWidget {
       pages: [
         NotePage(
           id: uuid.v4(),
+          width: 792.0,
+          height: 1056.0,
           blocks: [
             TextBlock(
               id: uuid.v4(),
               position: const Offset(40, 40),
-              size: const Size(515, 762),
+              size: const Size(712, 1016), // 792 width - 80 margin, 1056 height - 40 top margin
               content: const RichTextContent(segments: [
                 TextSegment(text: ''),
               ]),

@@ -45,8 +45,8 @@ class NotePage extends Equatable {
   const NotePage({
     required this.id,
     required this.blocks,
-    this.width = 595.0, // A4 width in points at 72 DPI
-    this.height = 842.0, // A4 height in points at 72 DPI
+    this.width = 792.0, // 3:4 aspect ratio (width)
+    this.height = 1056.0, // 3:4 aspect ratio (height)
   });
 
   NotePage copyWith({

@@ -162,8 +162,7 @@ class _EditableNotePageState extends State<EditableNotePage> with SingleTickerPr
           }
         }
 
-        const double fixedPageHeight = 1056.0; // Standard professional height (approx A4)
-
+        // No fixedPageHeight constant needed anymore, using widget.page.height
         return Listener(
           onPointerDown: (event) {
             // Switch active page on click
@@ -198,13 +197,13 @@ class _EditableNotePageState extends State<EditableNotePage> with SingleTickerPr
           },
           child: Container(
             width: widget.page.width,
-            height: fixedPageHeight,
+            height: widget.page.height,
             color: Colors.white,
             child: Stack(
               children: [
                 // Visual Layer
                 CustomPaint(
-                  size: Size(widget.page.width, fixedPageHeight),
+                  size: Size(widget.page.width, widget.page.height),
                   painter: PagePainter(
                     page: widget.page,
                     selection: selection,
@@ -246,7 +245,7 @@ class _EditableNotePageState extends State<EditableNotePage> with SingleTickerPr
                   left: textBlock.position.dx,
                   top: textBlock.position.dy,
                   width: textBlock.size.width,
-                  height: fixedPageHeight - textBlock.position.dy - 40.0, // Strict 40px bottom margin
+                  height: widget.page.height - textBlock.position.dy - 40.0, // Strict 40px bottom margin
                   child: IgnorePointer(
                     ignoring: isPenMode, // Disable text interaction in pen mode
                     child: Builder(builder: (context) {
