@@ -15,7 +15,7 @@ extension GetIsarNoteDocumentCollection on Isar {
 
 const IsarNoteDocumentSchema = CollectionSchema(
   name: r'IsarNoteDocument',
-  id: 1,
+  id: -((0x2E38C1CF << 32) | 0x783FC11D),
   properties: {
     r'createdAt': PropertySchema(
       id: 0,
@@ -66,7 +66,7 @@ const IsarNoteDocumentSchema = CollectionSchema(
   idName: r'isarId',
   indexes: {
     r'id': IndexSchema(
-      id: 2,
+      id: -((0x2D5BB201 << 32) | 0x79AC457D),
       name: r'id',
       unique: true,
       replace: true,
@@ -1512,7 +1512,7 @@ extension GetIsarFolderCollection on Isar {
 
 const IsarFolderSchema = CollectionSchema(
   name: r'IsarFolder',
-  id: 3,
+  id: -((0x6C51BEC1 << 32) | 0xC78B40CE),
   properties: {
     r'childFolderIds': PropertySchema(
       id: 0,
@@ -1552,7 +1552,7 @@ const IsarFolderSchema = CollectionSchema(
   idName: r'isarId',
   indexes: {
     r'id': IndexSchema(
-      id: 4,
+      id: -((0x2D5BB201 << 32) | 0x79AC457D),
       name: r'id',
       unique: true,
       replace: true,
@@ -3017,7 +3017,7 @@ extension IsarFolderQueryProperty
 
 const IsarNotePageSchema = Schema(
   name: r'IsarNotePage',
-  id: 5,
+  id: -((0x78FF10C0 << 32) | 0x43735F41),
   properties: {
     r'blocks': PropertySchema(
       id: 0,
@@ -3516,7 +3516,7 @@ extension IsarNotePageQueryObject
 
 const IsarNoteBlockSchema = Schema(
   name: r'IsarNoteBlock',
-  id: 6,
+  id: -((0x4088D1DA << 32) | 0xC5090EC7),
   properties: {
     r'height': PropertySchema(
       id: 0,
@@ -4540,7 +4540,7 @@ extension IsarNoteBlockQueryObject
 
 const IsarRichTextContentSchema = Schema(
   name: r'IsarRichTextContent',
-  id: 7,
+  id: -((0x2036C225 << 32) | 0xB8C1B33A),
   properties: {
     r'segments': PropertySchema(
       id: 0,
@@ -4731,7 +4731,7 @@ extension IsarRichTextContentQueryObject on QueryBuilder<IsarRichTextContent,
 
 const IsarTextSegmentSchema = Schema(
   name: r'IsarTextSegment',
-  id: 8,
+  id: ((0x49046ED9 << 32) | 0x10F64B40),
   properties: {
     r'colorValue': PropertySchema(
       id: 0,
@@ -5156,7 +5156,7 @@ extension IsarTextSegmentQueryObject
 
 const IsarStrokeSchema = Schema(
   name: r'IsarStroke',
-  id: 9,
+  id: -((0x2629A6C3 << 32) | 0xC9C70626),
   properties: {
     r'colorValue': PropertySchema(
       id: 0,
@@ -5645,7 +5645,7 @@ extension IsarStrokeQueryObject
 
 const IsarPointSchema = Schema(
   name: r'IsarPoint',
-  id: 10,
+  id: -((0x3864E40C << 32) | 0x5D287BEB),
   properties: {
     r'x': PropertySchema(
       id: 0,
