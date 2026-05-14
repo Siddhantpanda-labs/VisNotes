@@ -1,11 +1,16 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
+import 'package:json_annotation/json_annotation.dart';
 
+part 'text_content.g.dart';
+
+@JsonSerializable()
 class TextSegment extends Equatable {
   final String text;
   final bool isBold;
   final bool isItalic;
   final double? fontSize;
+  @JsonKey(includeFromJson: false, includeToJson: false) // Color is tricky in JSON
   final Color? color;
   final bool isHeading;
 
@@ -46,12 +51,19 @@ class TextSegment extends Equatable {
 
   @override
   List<Object?> get props => [text, isBold, isItalic, fontSize, color, isHeading];
+
+  factory TextSegment.fromJson(Map<String, dynamic> json) => _$TextSegmentFromJson(json);
+  Map<String, dynamic> toJson() => _$TextSegmentToJson(this);
 }
 
+@JsonSerializable()
 class RichTextContent extends Equatable {
   final List<TextSegment> segments;
 
   const RichTextContent({required this.segments});
+
+  factory RichTextContent.fromJson(Map<String, dynamic> json) => _$RichTextContentFromJson(json);
+  Map<String, dynamic> toJson() => _$RichTextContentToJson(this);
 
   String get plainText => segments.map((s) => s.text).join();
 

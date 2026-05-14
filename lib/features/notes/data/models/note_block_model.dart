@@ -44,12 +44,15 @@ class StrokeModel extends Stroke {
   @ColorConverter()
   final Color color;
 
+  @override
+  final List<double> pressures;
+
   const StrokeModel({
     required this.points,
-    required super.pressures,
+    required this.pressures,
     required this.color,
-    super.width,
-  }) : super(points: points, pressures: pressures, color: color);
+    double width = 2.0,
+  }) : super(points: points, pressures: pressures, color: color, width: width);
 
   factory StrokeModel.fromEntity(Stroke stroke) {
     return StrokeModel(

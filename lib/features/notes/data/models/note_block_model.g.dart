@@ -7,37 +7,35 @@ part of 'note_block_model.dart';
 // **************************************************************************
 
 StrokeModel _$StrokeModelFromJson(Map<String, dynamic> json) => StrokeModel(
-  points: (json['points'] as List<dynamic>)
-      .map((e) => const OffsetConverter().fromJson(e as Map<String, dynamic>))
-      .toList(),
-  pressures: (json['pressures'] as List<dynamic>)
-      .map((e) => (e as num).toDouble())
-      .toList(),
-  color: const ColorConverter().fromJson((json['color'] as num).toInt()),
-  width: (json['width'] as num?)?.toDouble() ?? 2.0,
-);
+      points: (json['points'] as List<dynamic>)
+          .map((e) =>
+              const OffsetConverter().fromJson(e as Map<String, dynamic>))
+          .toList(),
+      pressures: (json['pressures'] as List<dynamic>)
+          .map((e) => (e as num).toDouble())
+          .toList(),
+      color: const ColorConverter().fromJson((json['color'] as num).toInt()),
+    );
 
 Map<String, dynamic> _$StrokeModelToJson(StrokeModel instance) =>
     <String, dynamic>{
-      'pressures': instance.pressures,
-      'width': instance.width,
       'points': instance.points.map(const OffsetConverter().toJson).toList(),
       'color': const ColorConverter().toJson(instance.color),
+      'pressures': instance.pressures,
     };
 
 TextBlockModel _$TextBlockModelFromJson(Map<String, dynamic> json) =>
     TextBlockModel(
       id: json['id'] as String,
-      position: const OffsetConverter().fromJson(
-        json['position'] as Map<String, dynamic>,
-      ),
-      size: const SizeConverter().fromJson(
-        json['size'] as Map<String, dynamic>,
-      ),
+      position: const OffsetConverter()
+          .fromJson(json['position'] as Map<String, dynamic>),
+      size:
+          const SizeConverter().fromJson(json['size'] as Map<String, dynamic>),
       rotation: (json['rotation'] as num?)?.toDouble() ?? 0.0,
       opacity: (json['opacity'] as num?)?.toDouble() ?? 1.0,
       isLocked: json['isLocked'] as bool? ?? false,
-      content: json['content'] as String,
+      content:
+          RichTextContent.fromJson(json['content'] as Map<String, dynamic>),
     );
 
 Map<String, dynamic> _$TextBlockModelToJson(TextBlockModel instance) =>
@@ -54,12 +52,10 @@ Map<String, dynamic> _$TextBlockModelToJson(TextBlockModel instance) =>
 CanvasBlockModel _$CanvasBlockModelFromJson(Map<String, dynamic> json) =>
     CanvasBlockModel(
       id: json['id'] as String,
-      position: const OffsetConverter().fromJson(
-        json['position'] as Map<String, dynamic>,
-      ),
-      size: const SizeConverter().fromJson(
-        json['size'] as Map<String, dynamic>,
-      ),
+      position: const OffsetConverter()
+          .fromJson(json['position'] as Map<String, dynamic>),
+      size:
+          const SizeConverter().fromJson(json['size'] as Map<String, dynamic>),
       rotation: (json['rotation'] as num?)?.toDouble() ?? 0.0,
       opacity: (json['opacity'] as num?)?.toDouble() ?? 1.0,
       isLocked: json['isLocked'] as bool? ?? false,

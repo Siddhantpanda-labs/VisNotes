@@ -101,6 +101,7 @@ class _EditableNotePageState extends State<EditableNotePage> with SingleTickerPr
 
   @override
   void dispose() {
+    _caretBlinkController.dispose();
     _textController.dispose();
     _focusNode.dispose();
     super.dispose();

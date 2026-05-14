@@ -28,8 +28,8 @@ NotePageModel _$NotePageModelFromJson(Map<String, dynamic> json) =>
     NotePageModel(
       id: json['id'] as String,
       blocks: NotePageModel._blocksFromJson(json['blocks'] as List),
-      width: (json['width'] as num?)?.toDouble() ?? 595.0,
-      height: (json['height'] as num?)?.toDouble() ?? 842.0,
+      width: (json['width'] as num?)?.toDouble() ?? 792.0,
+      height: (json['height'] as num?)?.toDouble() ?? 1056.0,
     );
 
 Map<String, dynamic> _$NotePageModelToJson(NotePageModel instance) =>

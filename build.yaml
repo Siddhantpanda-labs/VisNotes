@@ -1,0 +1,11 @@
+targets:
+  $default:
+    builders:
+      json_serializable:
+        generate_for:
+          exclude:
+            - lib/features/notes/data/models/isar_note_model.dart
+      isar_generator:
+        generate_for:
+          include:
+            - lib/features/notes/data/models/isar_note_model.dart
