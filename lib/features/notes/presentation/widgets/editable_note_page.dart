@@ -114,6 +114,7 @@ class _EditableNotePageState extends State<EditableNotePage> with SingleTickerPr
         final currentState = state;
         final textBlock = widget.page.blocks.whereType<TextBlock>().firstOrNull;
         final isPenMode = currentState.activeTool == EditorTool.pen;
+        final isEraserMode = currentState.activeTool == EditorTool.eraser;
         final selection = currentState.selection;
         final pageIndex = currentState.activePageIndex;
         
@@ -193,6 +194,12 @@ class _EditableNotePageState extends State<EditableNotePage> with SingleTickerPr
                     pageIndex: widget.pageIndex,
                   ));
             }
+            if (isEraserMode) {
+              context.read<NoteEditorBloc>().add(EraseAtPosition(
+                    position: event.localPosition,
+                    pageIndex: widget.pageIndex,
+                  ));
+            }
           },
           onPointerMove: (event) {
             if (isPenMode) {
@@ -201,9 +208,20 @@ class _EditableNotePageState extends State<EditableNotePage> with SingleTickerPr
                     pressure: event.pressure,
                   ));
             }
+            if (isEraserMode) {
+              context.read<NoteEditorBloc>().add(EraseAtPosition(
+                    position: event.localPosition,
+                    pageIndex: widget.pageIndex,
+                  ));
+            }
           },
           onPointerUp: (event) {
-            if (isPenMode) {
+            if (isPenMode || isEraserMode) {
+              context.read<NoteEditorBloc>().add(const EndStroke());
+            }
+          },
+          onPointerCancel: (event) {
+            if (isPenMode || isEraserMode) {
               context.read<NoteEditorBloc>().add(const EndStroke());
             }
           },
@@ -251,6 +269,24 @@ class _EditableNotePageState extends State<EditableNotePage> with SingleTickerPr
                         ),
                         showGrid: false,
                         drawBackground: false, // Don't hide the layers below!
+                      ),
+                    ),
+                  ),
+                ),
+
+              // Eraser Circle Visual Overlay
+              if (isEraserMode && currentState.eraserPosition != null && pageIndex == widget.pageIndex)
+                Positioned(
+                  left: currentState.eraserPosition!.dx - 25,
+                  top: currentState.eraserPosition!.dy - 25,
+                  child: IgnorePointer(
+                    child: Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.blue.withOpacity(0.5), width: 2),
+                        color: Colors.blue.withOpacity(0.1),
                       ),
                     ),
                   ),

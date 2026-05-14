@@ -24,6 +24,7 @@ class NoteEditorBloc extends Bloc<NoteEditorEvent, NoteEditorState> {
     on<UpdateSelection>(_onUpdateSelection);
     on<ChangeTool>(_onChangeTool);
     on<ToggleFormat>(_onToggleFormat);
+    on<EraseAtPosition>(_onEraseAtPosition);
   }
 
   void _onLoadDocument(LoadNoteDocument event, Emitter<NoteEditorState> emit) {
@@ -307,24 +308,74 @@ class NoteEditorBloc extends Bloc<NoteEditorEvent, NoteEditorState> {
     final currentState = state as NoteEditorLoaded;
     final stroke = currentState.currentStroke;
     final pageIndex = currentState.activePageIndex;
-    if (stroke == null || pageIndex == null) return;
+
+    if (stroke != null && pageIndex != null) {
+      final doc = currentState.document;
+      final List<NotePage> newPages = List.from(doc.pages);
+      final page = newPages[pageIndex];
+      final List<NoteBlock> blocks = List.from(page.blocks);
+      final canvasBlockIndex = blocks.indexWhere((b) => b is CanvasBlock);
+      if (canvasBlockIndex != -1) {
+        final canvasBlock = blocks[canvasBlockIndex] as CanvasBlock;
+        blocks[canvasBlockIndex] = canvasBlock.copyWith(strokes: [...canvasBlock.strokes, stroke]);
+      } else {
+        blocks.add(CanvasBlock(id: _uuid.v4(), position: Offset.zero, size: Size(page.width, page.height), strokes: [stroke]));
+      }
+      newPages[pageIndex] = page.copyWith(blocks: blocks);
+      emit(currentState.copyWith(
+        document: doc.copyWith(pages: newPages, updatedAt: DateTime.now()), 
+        clearStroke: true,
+        clearEraser: true,
+      ));
+    } else {
+      // Just clear the UI states if no data to save
+      emit(currentState.copyWith(clearStroke: true, clearEraser: true));
+    }
+  }
+
+  void _onEraseAtPosition(EraseAtPosition event, Emitter<NoteEditorState> emit) {
+    if (state is! NoteEditorLoaded) return;
+    final currentState = state as NoteEditorLoaded;
     final doc = currentState.document;
+    final pageIndex = event.pageIndex;
+    
+    if (pageIndex < 0 || pageIndex >= doc.pages.length) return;
+
     final List<NotePage> newPages = List.from(doc.pages);
     final page = newPages[pageIndex];
     final List<NoteBlock> blocks = List.from(page.blocks);
+    
+    bool changed = false;
     final canvasBlockIndex = blocks.indexWhere((b) => b is CanvasBlock);
+    
     if (canvasBlockIndex != -1) {
       final canvasBlock = blocks[canvasBlockIndex] as CanvasBlock;
-      blocks[canvasBlockIndex] = canvasBlock.copyWith(strokes: [...canvasBlock.strokes, stroke]);
-    } else {
-      blocks.add(CanvasBlock(id: _uuid.v4(), position: Offset.zero, size: Size(page.width, page.height), strokes: [stroke]));
+      final originalStrokes = canvasBlock.strokes;
+      final remainingStrokes = originalStrokes.where((stroke) {
+        for (final p in stroke.points) {
+          // 25px eraser radius for comfortable desktop/tablet use
+          if ((p - event.position).distance < 25.0) {
+            changed = true;
+            return false;
+          }
+        }
+        return true;
+      }).toList();
+      
+      if (changed) {
+        blocks[canvasBlockIndex] = canvasBlock.copyWith(strokes: remainingStrokes);
+        newPages[pageIndex] = page.copyWith(blocks: blocks);
+      }
     }
-    newPages[pageIndex] = page.copyWith(blocks: blocks);
-    emit(currentState.copyWith(document: doc.copyWith(pages: newPages, updatedAt: DateTime.now()), clearStroke: true));
+    
+    emit(currentState.copyWith(
+      document: changed ? doc.copyWith(pages: newPages, updatedAt: DateTime.now()) : null,
+      eraserPosition: event.position,
+    ));
   }
 
   void _onChangeTool(ChangeTool event, Emitter<NoteEditorState> emit) {
     if (state is! NoteEditorLoaded) return;
-    emit((state as NoteEditorLoaded).copyWith(activeTool: event.tool));
+    emit((state as NoteEditorLoaded).copyWith(activeTool: event.tool, clearEraser: true));
   }
 }

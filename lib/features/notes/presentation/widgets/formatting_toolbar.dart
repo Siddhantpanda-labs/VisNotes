@@ -36,10 +36,10 @@ class FormattingToolbar extends StatelessWidget {
           children: [
             // Tool Selection
             _ToolButton(
-              icon: Icons.mouse,
+              icon: Icons.keyboard,
               isSelected: activeTool == EditorTool.select,
               onPressed: () => onToolChanged(EditorTool.select),
-              label: 'Select',
+              label: 'Text',
             ),
             _ToolButton(
               icon: Icons.edit,
@@ -48,7 +48,8 @@ class FormattingToolbar extends StatelessWidget {
               label: 'Pen',
             ),
             _ToolButton(
-              icon: Icons.auto_fix_normal,
+              icon: Icons.auto_fix_high,
+              customIcon: _PhysicalEraserIcon(isSelected: activeTool == EditorTool.eraser),
               isSelected: activeTool == EditorTool.eraser,
               onPressed: () => onToolChanged(EditorTool.eraser),
               label: 'Eraser',
@@ -100,14 +101,67 @@ class _FormatButton extends StatelessWidget {
   }
 }
 
+class _PhysicalEraserIcon extends StatelessWidget {
+  final bool isSelected;
+  const _PhysicalEraserIcon({required this.isSelected});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Transform.rotate(
+        angle: -0.5,
+        child: Container(
+          width: 20,
+          height: 12,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(2),
+            border: Border.all(
+              color: isSelected ? Colors.blue : Colors.black54,
+              width: 1.5,
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFFB7C5), // Eraser Pink
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(1),
+                      bottomLeft: Radius.circular(1),
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.only(
+                      topRight: Radius.circular(1),
+                      bottomRight: Radius.circular(1),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ToolButton extends StatelessWidget {
   final IconData icon;
+  final Widget? customIcon;
   final bool isSelected;
   final VoidCallback onPressed;
   final String label;
 
   const _ToolButton({
     required this.icon,
+    this.customIcon,
     required this.isSelected,
     required this.onPressed,
     required this.label,
@@ -121,7 +175,7 @@ class _ToolButton extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           IconButton(
-            icon: Icon(icon),
+            icon: customIcon ?? Icon(icon),
             onPressed: onPressed,
             color: isSelected ? Colors.blue : Colors.black54,
             style: IconButton.styleFrom(

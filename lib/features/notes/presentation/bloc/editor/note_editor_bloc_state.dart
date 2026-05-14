@@ -67,6 +67,16 @@ class EndStroke extends NoteEditorEvent {
   const EndStroke();
 }
 
+class EraseAtPosition extends NoteEditorEvent {
+  final Offset position;
+  final int pageIndex;
+
+  const EraseAtPosition({required this.position, required this.pageIndex});
+
+  @override
+  List<Object?> get props => [position, pageIndex];
+}
+
 enum EditorTool { select, pen, eraser }
 
 class ToggleFormat extends NoteEditorEvent {
@@ -115,6 +125,8 @@ class NoteEditorLoaded extends NoteEditorState {
   final EditorTool activeTool;
   final TextSegment activeTypingAttributes;
 
+  final Offset? eraserPosition;
+
   const NoteEditorLoaded(
     this.document, {
     this.currentStroke,
@@ -122,6 +134,7 @@ class NoteEditorLoaded extends NoteEditorState {
     this.selection,
     this.activeTool = EditorTool.select,
     this.activeTypingAttributes = const TextSegment(text: ''),
+    this.eraserPosition,
   });
 
   NoteEditorLoaded copyWith({
@@ -132,6 +145,8 @@ class NoteEditorLoaded extends NoteEditorState {
     TextSelection? selection,
     EditorTool? activeTool,
     TextSegment? activeTypingAttributes,
+    Offset? eraserPosition,
+    bool clearEraser = false,
   }) {
     return NoteEditorLoaded(
       document ?? this.document,
@@ -140,6 +155,7 @@ class NoteEditorLoaded extends NoteEditorState {
       selection: selection ?? this.selection,
       activeTool: activeTool ?? this.activeTool,
       activeTypingAttributes: activeTypingAttributes ?? this.activeTypingAttributes,
+      eraserPosition: clearEraser ? null : (eraserPosition ?? this.eraserPosition),
     );
   }
 
@@ -151,5 +167,6 @@ class NoteEditorLoaded extends NoteEditorState {
         selection,
         activeTool,
         activeTypingAttributes,
+        eraserPosition,
       ];
 }
