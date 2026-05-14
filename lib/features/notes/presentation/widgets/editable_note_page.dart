@@ -202,39 +202,44 @@ class _EditableNotePageState extends State<EditableNotePage> with SingleTickerPr
             child: Stack(
               children: [
                 // Visual Layer
-                CustomPaint(
-                  size: Size(widget.page.width, widget.page.height),
-                  painter: PagePainter(
-                    page: widget.page,
-                    selection: selection,
-                    selectionRects: selectionRects,
-                    caretOffset: caretMetrics?.offset,
-                    caretHeight: caretMetrics?.height,
-                    isCaretVisible: _isCaretVisible && _focusNode.hasFocus,
-                    showGrid: widget.showGrid,
+                ClipRect(
+                  child: CustomPaint(
+                    size: Size(widget.page.width, widget.page.height),
+                    painter: PagePainter(
+                      page: widget.page,
+                      selection: selection,
+                      selectionRects: selectionRects,
+                      caretOffset: caretMetrics?.offset,
+                      caretHeight: caretMetrics?.height,
+                      isCaretVisible: _isCaretVisible && _focusNode.hasFocus,
+                      showGrid: widget.showGrid,
+                    ),
                   ),
                 ),
 
               // Active Ink Layer (Drawing currently)
               if (currentState.currentStroke != null && pageIndex == widget.pageIndex)
                 IgnorePointer(
-                  child: CustomPaint(
-                    size: Size(widget.page.width, widget.page.height),
-                    painter: PagePainter(
-                      page: NotePage(
-                        id: 'active',
-                        blocks: [
-                          CanvasBlock(
-                            id: 'active_canvas',
-                            position: Offset.zero,
-                            size: Size(widget.page.width, widget.page.height),
-                            strokes: [currentState.currentStroke!],
-                          )
-                        ],
-                        width: widget.page.width,
-                        height: widget.page.height,
+                  child: ClipRect(
+                    child: CustomPaint(
+                      size: Size(widget.page.width, widget.page.height),
+                      painter: PagePainter(
+                        page: NotePage(
+                          id: 'active',
+                          blocks: [
+                            CanvasBlock(
+                              id: 'active_canvas',
+                              position: Offset.zero,
+                              size: Size(widget.page.width, widget.page.height),
+                              strokes: [currentState.currentStroke!],
+                            )
+                          ],
+                          width: widget.page.width,
+                          height: widget.page.height,
+                        ),
+                        showGrid: false,
+                        drawBackground: false, // Don't hide the layers below!
                       ),
-                      showGrid: false,
                     ),
                   ),
                 ),

@@ -10,6 +10,7 @@ class PagePainter extends CustomPainter {
   final double? caretHeight;
   final bool isCaretVisible;
   final bool showGrid;
+  final bool drawBackground;
 
   PagePainter({
     required this.page,
@@ -19,24 +20,27 @@ class PagePainter extends CustomPainter {
     this.caretHeight,
     this.isCaretVisible = false,
     this.showGrid = true,
+    this.drawBackground = true,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    // 1. Draw Page Background
-    final paint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
+    if (drawBackground) {
+      // 1. Draw Page Background
+      final paint = Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.fill;
+      canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
 
-    // 2. Draw Shadow/Border
-    final borderPaint = Paint()
-      ..color = Colors.black12
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), borderPaint);
+      // 2. Draw Shadow/Border
+      final borderPaint = Paint()
+        ..color = Colors.black12
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1;
+      canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), borderPaint);
+    }
 
-    if (showGrid) {
+    if (showGrid && drawBackground) {
       _drawGrid(canvas, size);
     }
 
@@ -146,6 +150,7 @@ class PagePainter extends CustomPainter {
   bool shouldRepaint(covariant PagePainter oldDelegate) {
     return oldDelegate.page != page || 
            oldDelegate.showGrid != showGrid || 
+           oldDelegate.drawBackground != drawBackground ||
            oldDelegate.selection != selection ||
            oldDelegate.caretOffset != caretOffset ||
            oldDelegate.isCaretVisible != isCaretVisible;
