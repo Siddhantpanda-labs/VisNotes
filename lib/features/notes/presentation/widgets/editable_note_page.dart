@@ -34,6 +34,9 @@ class _EditableNotePageState extends State<EditableNotePage>
   late AnimationController _caretBlinkController;
   late String _lastKnownText;
 
+  // Used for click-drag text selection
+  int? _dragAnchorOffset;
+
   @override
   void initState() {
     super.initState();
@@ -124,6 +127,149 @@ class _EditableNotePageState extends State<EditableNotePage>
     super.dispose();
   }
 
+  Future<void> _showContextMenu({
+    required BuildContext context,
+    required Offset globalPosition,
+    required TextBlock textBlock,
+    required TextSelection? selection,
+    required int pageIndex,
+  }) async {
+    final bloc = context.read<NoteEditorBloc>();
+    final hasSelection = selection != null && !selection.isCollapsed;
+    final text = textBlock.content.plainText;
+
+    // Build menu entries: [value, label, isDivider]
+    final entries = <(String, String)>[];
+    entries.add(('select_all', 'Select All'));
+    if (hasSelection) {
+      entries.add(('cut', 'Cut'));
+      entries.add(('copy', 'Copy'));
+    }
+    entries.add(('paste', 'Paste'));
+
+    const bg = Color(0xFF2C2C2E);
+    const fg = Color(0xFFEEEEEE);
+    const divColor = Color(0xFF3A3A3C);
+    const itemH = 30.0;
+
+    final result = await showDialog<String>(
+      context: context,
+      barrierColor: Colors.transparent,
+      barrierDismissible: true,
+      builder: (dialogCtx) => Stack(
+        children: [
+          Positioned(
+            left: globalPosition.dx,
+            top: globalPosition.dy,
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: bg,
+                  borderRadius: BorderRadius.circular(7),
+                  boxShadow: const [
+                    BoxShadow(color: Colors.black38, blurRadius: 8, offset: Offset(0, 3)),
+                  ],
+                ),
+                child: IntrinsicWidth(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (int i = 0; i < entries.length; i++) ...[
+                        if (i == 1 && hasSelection)
+                          const Divider(height: 1, thickness: 1, color: divColor),
+                        if (i == (hasSelection ? 3 : 1))
+                          const Divider(height: 1, thickness: 1, color: divColor),
+                        InkWell(
+                          onTap: () => Navigator.of(dialogCtx, rootNavigator: true)
+                              .pop(entries[i].$1),
+                          borderRadius: BorderRadius.vertical(
+                            top: i == 0 ? const Radius.circular(7) : Radius.zero,
+                            bottom: i == entries.length - 1
+                                ? const Radius.circular(7)
+                                : Radius.zero,
+                          ),
+                          highlightColor: Colors.white10,
+                          splashColor: Colors.white10,
+                          child: SizedBox(
+                            height: itemH,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 14),
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  entries[i].$2,
+                                  style: const TextStyle(
+                                    fontSize: 12.5,
+                                    color: fg,
+                                    fontFamily: 'Roboto',
+                                    fontWeight: FontWeight.w400,
+                                    letterSpacing: 0.1,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (result == null || !mounted) return;
+
+    switch (result) {
+      case 'select_all':
+        bloc.add(UpdateSelection(
+          selection: TextSelection(baseOffset: 0, extentOffset: text.length),
+          pageIndex: pageIndex,
+        ));
+
+      case 'copy':
+        if (hasSelection) {
+          await Clipboard.setData(
+            ClipboardData(text: text.substring(selection!.start, selection.end)),
+          );
+        }
+
+      case 'cut':
+        if (hasSelection) {
+          await Clipboard.setData(
+            ClipboardData(text: text.substring(selection!.start, selection.end)),
+          );
+          if (!mounted) return;
+          final newText = text.substring(0, selection.start) + text.substring(selection.end);
+          bloc.add(UpdateNoteText(
+            text: newText,
+            pageIndex: pageIndex,
+            blockId: textBlock.id,
+            selection: TextSelection.collapsed(offset: selection.start),
+          ));
+        }
+
+      case 'paste':
+        final data = await Clipboard.getData(Clipboard.kTextPlain);
+        if (!mounted || data?.text == null) return;
+        final pasteText = data!.text!;
+        final insertAt  = hasSelection ? selection!.start : (selection?.extentOffset ?? text.length);
+        final deleteEnd = hasSelection ? selection!.end   : insertAt;
+        final newText = text.substring(0, insertAt) + pasteText + text.substring(deleteEnd);
+        bloc.add(UpdateNoteText(
+          text: newText,
+          pageIndex: pageIndex,
+          blockId: textBlock.id,
+          selection: TextSelection.collapsed(offset: insertAt + pasteText.length),
+        ));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<NoteEditorBloc, NoteEditorState>(
@@ -182,7 +328,6 @@ class _EditableNotePageState extends State<EditableNotePage>
                   fontSize: 16,
                   height: 1.2,
                 ),
-                activeAttributes: currentState.activeTypingAttributes,
               );
             } else {
               selectionRects = layoutService.getSelectionRects(
@@ -201,14 +346,51 @@ class _EditableNotePageState extends State<EditableNotePage>
 
         return Listener(
           onPointerDown: (event) {
-            if (pageIndex != widget.pageIndex) {
+            // Right-click → context menu (don't move caret)
+            if (event.buttons == 2 /* kSecondaryMouseButton */ && textBlock != null) {
+              _showContextMenu(
+                context: context,
+                globalPosition: event.position,
+                textBlock: textBlock,
+                selection: selection,
+                pageIndex: widget.pageIndex,
+              );
+              return;
+            }
+
+            // --- TEXT TAP: Map tap → charOffset using OUR TextPainter ---
+            // This is the single source of truth. The invisible TextField never
+            // handles pointer events; our layout service maps taps directly.
+            if (!isPenMode && !isEraserMode && textBlock != null) {
+              final localTap = event.localPosition -
+                  Offset(textBlock.position.dx, textBlock.position.dy);
+              final charOffset = layoutService.getPositionForOffset(
+                content: textBlock.content,
+                localTapPosition: localTap,
+                maxWidth: textBlock.size.width,
+                defaultStyle: const TextStyle(
+                  fontFamily: 'Roboto',
+                  fontSize: 16,
+                  height: 1.2,
+                ),
+              );
+              context.read<NoteEditorBloc>().add(
+                UpdateSelection(
+                  selection: TextSelection.collapsed(offset: charOffset),
+                  pageIndex: widget.pageIndex,
+                ),
+              );
+              _dragAnchorOffset = charOffset; // anchor for drag selection
+              if (!_focusNode.hasFocus) _focusNode.requestFocus();
+            }
+
+            if (pageIndex != widget.pageIndex && textBlock != null) {
               context.read<NoteEditorBloc>().add(
                 UpdateSelection(
                   selection: _textController.selection,
                   pageIndex: widget.pageIndex,
                 ),
               );
-              _focusNode.requestFocus();
             }
 
             if (isPenMode) {
@@ -230,6 +412,30 @@ class _EditableNotePageState extends State<EditableNotePage>
             }
           },
           onPointerMove: (event) {
+            // --- TEXT DRAG SELECTION ---
+            if (!isPenMode && !isEraserMode && textBlock != null && _dragAnchorOffset != null) {
+              final localTap = event.localPosition -
+                  Offset(textBlock.position.dx, textBlock.position.dy);
+              final currentOffset = layoutService.getPositionForOffset(
+                content: textBlock.content,
+                localTapPosition: localTap,
+                maxWidth: textBlock.size.width,
+                defaultStyle: const TextStyle(
+                  fontFamily: 'Roboto',
+                  fontSize: 16,
+                  height: 1.2,
+                ),
+              );
+              // Build the range from anchor to current (handles both left and right drag)
+              final start = _dragAnchorOffset! < currentOffset ? _dragAnchorOffset! : currentOffset;
+              final end   = _dragAnchorOffset! < currentOffset ? currentOffset : _dragAnchorOffset!;
+              context.read<NoteEditorBloc>().add(
+                UpdateSelection(
+                  selection: TextSelection(baseOffset: start, extentOffset: end),
+                  pageIndex: widget.pageIndex,
+                ),
+              );
+            }
             if (isPenMode) {
               context.read<NoteEditorBloc>().add(
                 UpdateStroke(
@@ -248,20 +454,26 @@ class _EditableNotePageState extends State<EditableNotePage>
             }
           },
           onPointerUp: (event) {
+            _dragAnchorOffset = null;
             if (isPenMode || isEraserMode) {
               context.read<NoteEditorBloc>().add(const EndStroke());
             }
           },
           onPointerCancel: (event) {
+            _dragAnchorOffset = null;
             if (isPenMode || isEraserMode) {
               context.read<NoteEditorBloc>().add(const EndStroke());
             }
           },
-          child: Container(
-            width: widget.page.width,
-            height: widget.page.height,
-            color: Colors.white,
-            child: Stack(
+          child: MouseRegion(
+            cursor: (isPenMode || isEraserMode)
+                ? SystemMouseCursors.precise
+                : SystemMouseCursors.text,
+            child: Container(
+              width: widget.page.width,
+              height: widget.page.height,
+              color: Colors.white,
+              child: Stack(
               children: [
                 ClipRect(
                   child: CustomPaint(
@@ -335,9 +547,14 @@ class _EditableNotePageState extends State<EditableNotePage>
                     left: textBlock.position.dx,
                     top: textBlock.position.dy,
                     width: textBlock.size.width,
-                    height: widget.page.height - textBlock.position.dy - 40.0,
+                    // No height constraint: let the TextField size to its content.
+                    // TextLayoutService and PagePainter also lay out unconstrained in height.
+                    // Keeping a tight height here caused RenderEditable to clamp tap Y coords,
+                    // mapping clicks at the bottom of the page to wrong (upper) character offsets.
                     child: IgnorePointer(
-                      ignoring: isPenMode || isEraserMode,
+                      // Always ignore pointer events — the TextField is a keyboard-only sink.
+                      // All tap-to-offset mapping is handled by our Listener + TextLayoutService.
+                      ignoring: true,
                       child: Builder(
                         builder: (context) {
                           final activeAttr =
@@ -520,9 +737,10 @@ class _EditableNotePageState extends State<EditableNotePage>
                   ),
               ],
             ),
-          ),
-        );
-      },
-    );
+          ), // Container
+        ), // MouseRegion
+      );
+    },
+  );
   }
 }

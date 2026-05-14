@@ -101,39 +101,39 @@ class TextLayoutService {
     required int charOffset,
     required double maxWidth,
     required TextStyle defaultStyle,
-    TextSegment? activeAttributes,
   }) {
     final textPainter = _createTextPainter(content, defaultStyle, maxWidth);
-    // Use upstream affinity to prevent jumping to the wrong line at wrap boundaries
-    final caretOffset = textPainter.getOffsetForCaret(
-      TextPosition(offset: charOffset, affinity: TextAffinity.upstream), 
-      Rect.zero
+    final textPosition = TextPosition(
+      offset: charOffset,
+      affinity: TextAffinity.upstream,
     );
-    
-    // Use the actively held attributes or look ahead at the character the cursor is on
-    final segment = activeAttributes ?? content.getAttributesAt(charOffset);
-    final caretHeight = segment.isHeading ? 24.0 * 1.2 : 16.0 * 1.2;
 
-    // Find the line this caret is on to find the "floor"
-    final lines = textPainter.computeLineMetrics();
-    double cumulativeHeight = 0;
-    double lineBottom = caretOffset.dy + caretHeight; // Default fallback
+    // Ask the TextPainter for the exact caret position — same layout pass, guaranteed correct.
+    final caretOffset = textPainter.getOffsetForCaret(textPosition, Rect.zero);
 
-    for (var line in lines) {
-      // Use tighter float tolerance to prevent jumping to upper rows
-      if (caretOffset.dy >= cumulativeHeight - 0.5 && caretOffset.dy < cumulativeHeight + line.height - 0.5) {
-        lineBottom = cumulativeHeight + line.height;
-        break;
-      }
-      cumulativeHeight += line.height;
-    }
+    // Ask the TextPainter for the exact measured height of the glyph at this position.
+    // This is the ONLY correct source of truth — no guessing from segment attributes.
+    final fullHeight = textPainter.getFullHeightForCaret(textPosition, Rect.zero);
+    final caretHeight = fullHeight ?? 16.0 * 1.2; // fallback if no glyphs yet
 
-    // Anchor the caret to the bottom of the line
-    return CaretMetrics(
-      offset: Offset(caretOffset.dx, lineBottom - caretHeight), 
-      height: caretHeight
-    );
+    return CaretMetrics(offset: caretOffset, height: caretHeight);
   }
+
+  /// Maps a tap position (local to the text block) to a character offset.
+  /// Uses the SAME TextPainter as [getCaretMetrics] — this is the single source
+  /// of truth for all text layout, ensuring tap→offset and offset→caret are
+  /// always consistent with each other and with the visual rendering.
+  int getPositionForOffset({
+    required RichTextContent content,
+    required Offset localTapPosition,
+    required double maxWidth,
+    required TextStyle defaultStyle,
+  }) {
+    final textPainter = _createTextPainter(content, defaultStyle, maxWidth);
+    final position = textPainter.getPositionForOffset(localTapPosition);
+    return position.offset;
+  }
+
 
   /// Calculates a list of rectangles that represent the selection highlight
   List<Rect> getSelectionRects({
