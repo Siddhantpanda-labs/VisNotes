@@ -27,6 +27,20 @@ class NoteRepository {
     return await isar.isarNoteDocuments.where().findAll();
   }
 
+  Future<List<IsarNoteDocument>> getNotesByParent(String? parentId) async {
+    final isar = await db;
+    if (parentId == null) {
+      return await isar.isarNoteDocuments.filter()
+          .parentFolderIdIsNull()
+          .isDeletedEqualTo(false)
+          .findAll();
+    }
+    return await isar.isarNoteDocuments.filter()
+        .parentFolderIdEqualTo(parentId)
+        .isDeletedEqualTo(false)
+        .findAll();
+  }
+
   Future<void> saveNote(IsarNoteDocument note) async {
     final isar = await db;
     await isar.writeTxn(() async {
@@ -34,7 +48,31 @@ class NoteRepository {
     });
   }
 
-  Future<void> deleteNote(String id) async {
+  Future<void> trashNote(String id) async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      final note = await isar.isarNoteDocuments.filter().idEqualTo(id).findFirst();
+      if (note != null) {
+        note.isDeleted = true;
+        note.deletedAt = DateTime.now();
+        await isar.isarNoteDocuments.put(note);
+      }
+    });
+  }
+
+  Future<void> restoreNote(String id) async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      final note = await isar.isarNoteDocuments.filter().idEqualTo(id).findFirst();
+      if (note != null) {
+        note.isDeleted = false;
+        note.deletedAt = null;
+        await isar.isarNoteDocuments.put(note);
+      }
+    });
+  }
+
+  Future<void> deleteNotePermanently(String id) async {
     final isar = await db;
     await isar.writeTxn(() async {
       await isar.isarNoteDocuments.filter().idEqualTo(id).deleteAll();
@@ -52,10 +90,35 @@ class NoteRepository {
     });
   }
 
+  Future<void> moveNote(String noteId, String? targetFolderId) async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      final note = await isar.isarNoteDocuments.filter().idEqualTo(noteId).findFirst();
+      if (note != null) {
+        note.parentFolderId = targetFolderId;
+        await isar.isarNoteDocuments.put(note);
+      }
+    });
+  }
+
   // Folders
   Future<List<IsarFolder>> getAllFolders() async {
     final isar = await db;
-    return await isar.isarFolders.where().findAll();
+    return await isar.isarFolders.filter().isDeletedEqualTo(false).findAll();
+  }
+
+  Future<List<IsarFolder>> getFoldersByParent(String? parentId) async {
+    final isar = await db;
+    if (parentId == null) {
+      return await isar.isarFolders.filter()
+          .parentFolderIdIsNull()
+          .isDeletedEqualTo(false)
+          .findAll();
+    }
+    return await isar.isarFolders.filter()
+        .parentFolderIdEqualTo(parentId)
+        .isDeletedEqualTo(false)
+        .findAll();
   }
 
   Future<void> saveFolder(IsarFolder folder) async {
@@ -65,11 +128,50 @@ class NoteRepository {
     });
   }
 
-  Future<void> deleteFolder(String id) async {
+  Future<void> trashFolder(String id) async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      final folder = await isar.isarFolders.filter().idEqualTo(id).findFirst();
+      if (folder != null) {
+        folder.isDeleted = true;
+        folder.deletedAt = DateTime.now();
+        await isar.isarFolders.put(folder);
+        
+        // Also soft delete everything inside? 
+        // For simplicity, we just mark the folder. 
+        // When viewing trash, we might want to see the folder and restore its contents.
+      }
+    });
+  }
+
+  Future<void> restoreFolder(String id) async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      final folder = await isar.isarFolders.filter().idEqualTo(id).findFirst();
+      if (folder != null) {
+        folder.isDeleted = false;
+        folder.deletedAt = null;
+        await isar.isarFolders.put(folder);
+      }
+    });
+  }
+
+  Future<void> deleteFolderPermanently(String id) async {
     final isar = await db;
     await isar.writeTxn(() async {
       await isar.isarFolders.filter().idEqualTo(id).deleteAll();
     });
+  }
+
+  // Trash specific fetches
+  Future<List<IsarNoteDocument>> getTrashNotes() async {
+    final isar = await db;
+    return await isar.isarNoteDocuments.filter().isDeletedEqualTo(true).findAll();
+  }
+
+  Future<List<IsarFolder>> getTrashFolders() async {
+    final isar = await db;
+    return await isar.isarFolders.filter().isDeletedEqualTo(true).findAll();
   }
 
   Future<void> renameFolder(String id, String newName) async {
@@ -78,6 +180,19 @@ class NoteRepository {
       final folder = await isar.isarFolders.filter().idEqualTo(id).findFirst();
       if (folder != null) {
         folder.name = newName;
+        await isar.isarFolders.put(folder);
+      }
+    });
+  }
+
+  Future<void> moveFolder(String folderId, String? targetFolderId) async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      final folder = await isar.isarFolders.filter().idEqualTo(folderId).findFirst();
+      if (folder != null) {
+        // Prevent moving folder into itself or a potential cycle would need more logic
+        // For now, basic move
+        folder.parentFolderId = targetFolderId;
         await isar.isarFolders.put(folder);
       }
     });

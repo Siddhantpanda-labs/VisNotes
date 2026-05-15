@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../bloc/dashboard/dashboard_bloc.dart';
+import '../../../data/models/isar_note_model.dart';
 
 class NodeActionBar extends StatelessWidget {
   final String id;
@@ -51,34 +52,67 @@ class NodeActionBar extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit_outlined, color: Colors.white, size: 18),
-                      onPressed: () {
-                        onClose();
-                        _showRenameDialog(context);
-                      },
-                      tooltip: 'Rename',
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.drive_file_move_outlined, color: Colors.white, size: 18),
-                      onPressed: () {
-                        // TODO: Implement move logic
-                        onClose();
-                      },
-                      tooltip: 'Move',
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 18),
-                      onPressed: () {
-                        context.read<DashboardBloc>().add(DeleteNode(id: id, isFolder: isFolder));
-                        onClose();
-                      },
-                      tooltip: 'Delete',
-                    ),
-                  ],
+                child: BlocBuilder<DashboardBloc, DashboardState>(
+                  builder: (context, state) {
+                    final bool isTrash = state is DashboardLoaded && state.isTrashView;
+                    
+                    return Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isTrash) ...[
+                          IconButton(
+                            icon: const Icon(Icons.restore, color: Colors.greenAccent, size: 18),
+                            onPressed: () {
+                              context.read<DashboardBloc>().add(RestoreItem(id: id, isFolder: isFolder));
+                              onClose();
+                            },
+                            tooltip: 'Restore',
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_forever, color: Colors.redAccent, size: 18),
+                            onPressed: () {
+                              context.read<DashboardBloc>().add(PermanentlyDeleteItem(id: id, isFolder: isFolder));
+                              onClose();
+                            },
+                            tooltip: 'Delete Permanently',
+                          ),
+                        ] else ...[
+                          IconButton(
+                            icon: const Icon(Icons.edit_outlined, color: Colors.white, size: 18),
+                            onPressed: () {
+                              onClose();
+                              _showRenameDialog(context);
+                            },
+                            tooltip: 'Rename',
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.drive_file_move_outlined, color: Colors.white, size: 18),
+                            onPressed: () {
+                              onClose();
+                              _showMoveDialog(context);
+                            },
+                            tooltip: 'Move',
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
+                            onPressed: () {
+                              context.read<DashboardBloc>().add(ToggleSelection(id: id, isFolder: isFolder));
+                              onClose();
+                            },
+                            tooltip: 'Select',
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 18),
+                            onPressed: () {
+                              context.read<DashboardBloc>().add(DeleteNode(id: id, isFolder: isFolder));
+                              onClose();
+                            },
+                            tooltip: 'Move to Trash',
+                          ),
+                        ],
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
@@ -139,6 +173,109 @@ class NodeActionBar extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+  void _showMoveDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => BlocBuilder<DashboardBloc, DashboardState>(
+        builder: (context, state) {
+          if (state is! DashboardLoaded) return const SizedBox.shrink();
+
+          return AlertDialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            title: Text(
+              'Move to...',
+              style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+            ),
+            content: SizedBox(
+              width: 300,
+              height: 400,
+              child: ListView(
+                children: [
+                  // Root option
+                  ListTile(
+                    leading: const Icon(Icons.dashboard_outlined, size: 20),
+                    title: Text('Root Dashboard', style: GoogleFonts.outfit(fontSize: 14)),
+                    onTap: () {
+                      context.read<DashboardBloc>().add(MoveItemToFolder(
+                        id: id,
+                        targetFolderId: null,
+                        isFolder: isFolder,
+                      ));
+                      Navigator.pop(dialogCtx);
+                    },
+                  ),
+                  const Divider(),
+                  // Folder tree
+                  ...state.allFolders
+                      .where((f) => f.parentFolderId == null)
+                      .map((f) => _FolderPickerTile(
+                            folder: f,
+                            allFolders: state.allFolders,
+                            depth: 0,
+                            onMove: (targetId) {
+                              context.read<DashboardBloc>().add(MoveItemToFolder(
+                                id: id,
+                                targetFolderId: targetId,
+                                isFolder: isFolder,
+                              ));
+                              Navigator.pop(dialogCtx);
+                            },
+                            // Prevent moving into itself or its subtree if moving a folder
+                            disabledId: isFolder ? id : null,
+                          )),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _FolderPickerTile extends StatelessWidget {
+  final IsarFolder folder;
+  final List<IsarFolder> allFolders;
+  final int depth;
+  final Function(String) onMove;
+  final String? disabledId;
+
+  const _FolderPickerTile({
+    required this.folder,
+    required this.allFolders,
+    required this.depth,
+    required this.onMove,
+    this.disabledId,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (folder.id == disabledId) return const SizedBox.shrink();
+
+    final children = allFolders.where((IsarFolder f) => f.parentFolderId == folder.id).toList();
+
+    return Column(
+      children: [
+        ListTile(
+          contentPadding: EdgeInsets.only(left: 16.0 + (depth * 20.0)),
+          leading: const Icon(Icons.folder_outlined, size: 20, color: Colors.amber),
+          title: Text(
+            folder.name ?? 'Untitled',
+            style: GoogleFonts.outfit(fontSize: 14),
+          ),
+          onTap: () => onMove(folder.id!),
+        ),
+        ...children.map((child) => _FolderPickerTile(
+              folder: child,
+              allFolders: allFolders,
+              depth: depth + 1,
+              onMove: onMove,
+              disabledId: disabledId,
+            )),
+      ],
     );
   }
 }

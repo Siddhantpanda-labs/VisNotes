@@ -15,7 +15,7 @@ extension GetIsarNoteDocumentCollection on Isar {
 
 const IsarNoteDocumentSchema = CollectionSchema(
   name: r'IsarNoteDocument',
-  id: -((0x2E38C1CF << 32) | 0x783FC11D),
+  id: -3330625021260316957,
   properties: {
     r'createdAt': PropertySchema(
       id: 0,
@@ -32,29 +32,44 @@ const IsarNoteDocumentSchema = CollectionSchema(
       name: r'dashboardY',
       type: IsarType.double,
     ),
-    r'id': PropertySchema(
+    r'deletedAt': PropertySchema(
       id: 3,
+      name: r'deletedAt',
+      type: IsarType.dateTime,
+    ),
+    r'id': PropertySchema(
+      id: 4,
       name: r'id',
       type: IsarType.string,
     ),
+    r'isDeleted': PropertySchema(
+      id: 5,
+      name: r'isDeleted',
+      type: IsarType.bool,
+    ),
     r'isPinned': PropertySchema(
-      id: 4,
+      id: 6,
       name: r'isPinned',
       type: IsarType.bool,
     ),
     r'pages': PropertySchema(
-      id: 5,
+      id: 7,
       name: r'pages',
       type: IsarType.objectList,
       target: r'IsarNotePage',
     ),
+    r'parentFolderId': PropertySchema(
+      id: 8,
+      name: r'parentFolderId',
+      type: IsarType.string,
+    ),
     r'title': PropertySchema(
-      id: 6,
+      id: 9,
       name: r'title',
       type: IsarType.string,
     ),
     r'updatedAt': PropertySchema(
-      id: 7,
+      id: 10,
       name: r'updatedAt',
       type: IsarType.dateTime,
     )
@@ -66,7 +81,7 @@ const IsarNoteDocumentSchema = CollectionSchema(
   idName: r'isarId',
   indexes: {
     r'id': IndexSchema(
-      id: -((0x2D5BB201 << 32) | 0x79AC457D),
+      id: -3268401673993471357,
       name: r'id',
       unique: true,
       replace: true,
@@ -115,6 +130,12 @@ int _isarNoteDocumentEstimateSize(
     }
   }
   {
+    final value = object.parentFolderId;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
     final value = object.title;
     if (value != null) {
       bytesCount += 3 + value.length * 3;
@@ -132,16 +153,19 @@ void _isarNoteDocumentSerialize(
   writer.writeDateTime(offsets[0], object.createdAt);
   writer.writeDouble(offsets[1], object.dashboardX);
   writer.writeDouble(offsets[2], object.dashboardY);
-  writer.writeString(offsets[3], object.id);
-  writer.writeBool(offsets[4], object.isPinned);
+  writer.writeDateTime(offsets[3], object.deletedAt);
+  writer.writeString(offsets[4], object.id);
+  writer.writeBool(offsets[5], object.isDeleted);
+  writer.writeBool(offsets[6], object.isPinned);
   writer.writeObjectList<IsarNotePage>(
-    offsets[5],
+    offsets[7],
     allOffsets,
     IsarNotePageSchema.serialize,
     object.pages,
   );
-  writer.writeString(offsets[6], object.title);
-  writer.writeDateTime(offsets[7], object.updatedAt);
+  writer.writeString(offsets[8], object.parentFolderId);
+  writer.writeString(offsets[9], object.title);
+  writer.writeDateTime(offsets[10], object.updatedAt);
 }
 
 IsarNoteDocument _isarNoteDocumentDeserialize(
@@ -154,18 +178,21 @@ IsarNoteDocument _isarNoteDocumentDeserialize(
   object.createdAt = reader.readDateTimeOrNull(offsets[0]);
   object.dashboardX = reader.readDouble(offsets[1]);
   object.dashboardY = reader.readDouble(offsets[2]);
-  object.id = reader.readStringOrNull(offsets[3]);
-  object.isPinned = reader.readBool(offsets[4]);
+  object.deletedAt = reader.readDateTimeOrNull(offsets[3]);
+  object.id = reader.readStringOrNull(offsets[4]);
+  object.isDeleted = reader.readBool(offsets[5]);
+  object.isPinned = reader.readBool(offsets[6]);
   object.isarId = id;
   object.pages = reader.readObjectList<IsarNotePage>(
-        offsets[5],
+        offsets[7],
         IsarNotePageSchema.deserialize,
         allOffsets,
         IsarNotePage(),
       ) ??
       [];
-  object.title = reader.readStringOrNull(offsets[6]);
-  object.updatedAt = reader.readDateTimeOrNull(offsets[7]);
+  object.parentFolderId = reader.readStringOrNull(offsets[8]);
+  object.title = reader.readStringOrNull(offsets[9]);
+  object.updatedAt = reader.readDateTimeOrNull(offsets[10]);
   return object;
 }
 
@@ -183,10 +210,14 @@ P _isarNoteDocumentDeserializeProp<P>(
     case 2:
       return (reader.readDouble(offset)) as P;
     case 3:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 4:
-      return (reader.readBool(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 5:
+      return (reader.readBool(offset)) as P;
+    case 6:
+      return (reader.readBool(offset)) as P;
+    case 7:
       return (reader.readObjectList<IsarNotePage>(
             offset,
             IsarNotePageSchema.deserialize,
@@ -194,9 +225,11 @@ P _isarNoteDocumentDeserializeProp<P>(
             IsarNotePage(),
           ) ??
           []) as P;
-    case 6:
+    case 8:
       return (reader.readStringOrNull(offset)) as P;
-    case 7:
+    case 9:
+      return (reader.readStringOrNull(offset)) as P;
+    case 10:
       return (reader.readDateTimeOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -627,6 +660,80 @@ extension IsarNoteDocumentQueryFilter
   }
 
   QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      deletedAtIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'deletedAt',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      deletedAtIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'deletedAt',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      deletedAtEqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'deletedAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      deletedAtGreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'deletedAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      deletedAtLessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'deletedAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      deletedAtBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'deletedAt',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
       idIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
@@ -776,6 +883,16 @@ extension IsarNoteDocumentQueryFilter
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'id',
         value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      isDeletedEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isDeleted',
+        value: value,
       ));
     });
   }
@@ -932,6 +1049,160 @@ extension IsarNoteDocumentQueryFilter
         upper,
         includeUpper,
       );
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      parentFolderIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'parentFolderId',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      parentFolderIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'parentFolderId',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      parentFolderIdEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'parentFolderId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      parentFolderIdGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'parentFolderId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      parentFolderIdLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'parentFolderId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      parentFolderIdBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'parentFolderId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      parentFolderIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'parentFolderId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      parentFolderIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'parentFolderId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      parentFolderIdContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'parentFolderId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      parentFolderIdMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'parentFolderId',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      parentFolderIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'parentFolderId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      parentFolderIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'parentFolderId',
+        value: '',
+      ));
     });
   }
 
@@ -1221,6 +1492,20 @@ extension IsarNoteDocumentQuerySortBy
     });
   }
 
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      sortByDeletedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deletedAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      sortByDeletedAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deletedAt', Sort.desc);
+    });
+  }
+
   QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy> sortById() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.asc);
@@ -1235,6 +1520,20 @@ extension IsarNoteDocumentQuerySortBy
   }
 
   QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      sortByIsDeleted() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDeleted', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      sortByIsDeletedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDeleted', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
       sortByIsPinned() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isPinned', Sort.asc);
@@ -1245,6 +1544,20 @@ extension IsarNoteDocumentQuerySortBy
       sortByIsPinnedDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isPinned', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      sortByParentFolderId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'parentFolderId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      sortByParentFolderIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'parentFolderId', Sort.desc);
     });
   }
 
@@ -1320,6 +1633,20 @@ extension IsarNoteDocumentQuerySortThenBy
     });
   }
 
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      thenByDeletedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deletedAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      thenByDeletedAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deletedAt', Sort.desc);
+    });
+  }
+
   QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy> thenById() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.asc);
@@ -1330,6 +1657,20 @@ extension IsarNoteDocumentQuerySortThenBy
       thenByIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      thenByIsDeleted() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDeleted', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      thenByIsDeletedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDeleted', Sort.desc);
     });
   }
 
@@ -1358,6 +1699,20 @@ extension IsarNoteDocumentQuerySortThenBy
       thenByIsarIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isarId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      thenByParentFolderId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'parentFolderId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      thenByParentFolderIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'parentFolderId', Sort.desc);
     });
   }
 
@@ -1412,6 +1767,13 @@ extension IsarNoteDocumentQueryWhereDistinct
     });
   }
 
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QDistinct>
+      distinctByDeletedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'deletedAt');
+    });
+  }
+
   QueryBuilder<IsarNoteDocument, IsarNoteDocument, QDistinct> distinctById(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -1420,9 +1782,24 @@ extension IsarNoteDocumentQueryWhereDistinct
   }
 
   QueryBuilder<IsarNoteDocument, IsarNoteDocument, QDistinct>
+      distinctByIsDeleted() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isDeleted');
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QDistinct>
       distinctByIsPinned() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'isPinned');
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QDistinct>
+      distinctByParentFolderId({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'parentFolderId',
+          caseSensitive: caseSensitive);
     });
   }
 
@@ -1470,9 +1847,22 @@ extension IsarNoteDocumentQueryProperty
     });
   }
 
+  QueryBuilder<IsarNoteDocument, DateTime?, QQueryOperations>
+      deletedAtProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'deletedAt');
+    });
+  }
+
   QueryBuilder<IsarNoteDocument, String?, QQueryOperations> idProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'id');
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, bool, QQueryOperations> isDeletedProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isDeleted');
     });
   }
 
@@ -1486,6 +1876,13 @@ extension IsarNoteDocumentQueryProperty
       pagesProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'pages');
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, String?, QQueryOperations>
+      parentFolderIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'parentFolderId');
     });
   }
 
@@ -1512,7 +1909,7 @@ extension GetIsarFolderCollection on Isar {
 
 const IsarFolderSchema = CollectionSchema(
   name: r'IsarFolder',
-  id: -((0x6C51BEC1 << 32) | 0xC78B40CE),
+  id: -7805229368695537870,
   properties: {
     r'childFolderIds': PropertySchema(
       id: 0,
@@ -1529,20 +1926,35 @@ const IsarFolderSchema = CollectionSchema(
       name: r'dashboardY',
       type: IsarType.double,
     ),
-    r'id': PropertySchema(
+    r'deletedAt': PropertySchema(
       id: 3,
+      name: r'deletedAt',
+      type: IsarType.dateTime,
+    ),
+    r'id': PropertySchema(
+      id: 4,
       name: r'id',
       type: IsarType.string,
     ),
+    r'isDeleted': PropertySchema(
+      id: 5,
+      name: r'isDeleted',
+      type: IsarType.bool,
+    ),
     r'name': PropertySchema(
-      id: 4,
+      id: 6,
       name: r'name',
       type: IsarType.string,
     ),
     r'noteIds': PropertySchema(
-      id: 5,
+      id: 7,
       name: r'noteIds',
       type: IsarType.stringList,
+    ),
+    r'parentFolderId': PropertySchema(
+      id: 8,
+      name: r'parentFolderId',
+      type: IsarType.string,
     )
   },
   estimateSize: _isarFolderEstimateSize,
@@ -1552,7 +1964,7 @@ const IsarFolderSchema = CollectionSchema(
   idName: r'isarId',
   indexes: {
     r'id': IndexSchema(
-      id: -((0x2D5BB201 << 32) | 0x79AC457D),
+      id: -3268401673993471357,
       name: r'id',
       unique: true,
       replace: true,
@@ -1605,6 +2017,12 @@ int _isarFolderEstimateSize(
       bytesCount += value.length * 3;
     }
   }
+  {
+    final value = object.parentFolderId;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   return bytesCount;
 }
 
@@ -1617,9 +2035,12 @@ void _isarFolderSerialize(
   writer.writeStringList(offsets[0], object.childFolderIds);
   writer.writeDouble(offsets[1], object.dashboardX);
   writer.writeDouble(offsets[2], object.dashboardY);
-  writer.writeString(offsets[3], object.id);
-  writer.writeString(offsets[4], object.name);
-  writer.writeStringList(offsets[5], object.noteIds);
+  writer.writeDateTime(offsets[3], object.deletedAt);
+  writer.writeString(offsets[4], object.id);
+  writer.writeBool(offsets[5], object.isDeleted);
+  writer.writeString(offsets[6], object.name);
+  writer.writeStringList(offsets[7], object.noteIds);
+  writer.writeString(offsets[8], object.parentFolderId);
 }
 
 IsarFolder _isarFolderDeserialize(
@@ -1632,10 +2053,13 @@ IsarFolder _isarFolderDeserialize(
   object.childFolderIds = reader.readStringList(offsets[0]) ?? [];
   object.dashboardX = reader.readDouble(offsets[1]);
   object.dashboardY = reader.readDouble(offsets[2]);
-  object.id = reader.readStringOrNull(offsets[3]);
+  object.deletedAt = reader.readDateTimeOrNull(offsets[3]);
+  object.id = reader.readStringOrNull(offsets[4]);
+  object.isDeleted = reader.readBool(offsets[5]);
   object.isarId = id;
-  object.name = reader.readStringOrNull(offsets[4]);
-  object.noteIds = reader.readStringList(offsets[5]) ?? [];
+  object.name = reader.readStringOrNull(offsets[6]);
+  object.noteIds = reader.readStringList(offsets[7]) ?? [];
+  object.parentFolderId = reader.readStringOrNull(offsets[8]);
   return object;
 }
 
@@ -1653,11 +2077,17 @@ P _isarFolderDeserializeProp<P>(
     case 2:
       return (reader.readDouble(offset)) as P;
     case 3:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 4:
       return (reader.readStringOrNull(offset)) as P;
     case 5:
+      return (reader.readBool(offset)) as P;
+    case 6:
+      return (reader.readStringOrNull(offset)) as P;
+    case 7:
       return (reader.readStringList(offset) ?? []) as P;
+    case 8:
+      return (reader.readStringOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
   }
@@ -2231,6 +2661,78 @@ extension IsarFolderQueryFilter
     });
   }
 
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      deletedAtIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'deletedAt',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      deletedAtIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'deletedAt',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition> deletedAtEqualTo(
+      DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'deletedAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      deletedAtGreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'deletedAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition> deletedAtLessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'deletedAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition> deletedAtBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'deletedAt',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
   QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition> idIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
@@ -2373,6 +2875,16 @@ extension IsarFolderQueryFilter
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'id',
         value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition> isDeletedEqualTo(
+      bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isDeleted',
+        value: value,
       ));
     });
   }
@@ -2799,6 +3311,160 @@ extension IsarFolderQueryFilter
       );
     });
   }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      parentFolderIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'parentFolderId',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      parentFolderIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'parentFolderId',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      parentFolderIdEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'parentFolderId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      parentFolderIdGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'parentFolderId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      parentFolderIdLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'parentFolderId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      parentFolderIdBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'parentFolderId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      parentFolderIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'parentFolderId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      parentFolderIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'parentFolderId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      parentFolderIdContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'parentFolderId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      parentFolderIdMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'parentFolderId',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      parentFolderIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'parentFolderId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      parentFolderIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'parentFolderId',
+        value: '',
+      ));
+    });
+  }
 }
 
 extension IsarFolderQueryObject
@@ -2833,6 +3499,18 @@ extension IsarFolderQuerySortBy
     });
   }
 
+  QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> sortByDeletedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deletedAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> sortByDeletedAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deletedAt', Sort.desc);
+    });
+  }
+
   QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> sortById() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.asc);
@@ -2845,6 +3523,18 @@ extension IsarFolderQuerySortBy
     });
   }
 
+  QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> sortByIsDeleted() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDeleted', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> sortByIsDeletedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDeleted', Sort.desc);
+    });
+  }
+
   QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> sortByName() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'name', Sort.asc);
@@ -2854,6 +3544,19 @@ extension IsarFolderQuerySortBy
   QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> sortByNameDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'name', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> sortByParentFolderId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'parentFolderId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy>
+      sortByParentFolderIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'parentFolderId', Sort.desc);
     });
   }
 }
@@ -2884,6 +3587,18 @@ extension IsarFolderQuerySortThenBy
     });
   }
 
+  QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> thenByDeletedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deletedAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> thenByDeletedAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'deletedAt', Sort.desc);
+    });
+  }
+
   QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> thenById() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.asc);
@@ -2893,6 +3608,18 @@ extension IsarFolderQuerySortThenBy
   QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> thenByIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'id', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> thenByIsDeleted() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDeleted', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> thenByIsDeletedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isDeleted', Sort.desc);
     });
   }
 
@@ -2919,6 +3646,19 @@ extension IsarFolderQuerySortThenBy
       return query.addSortBy(r'name', Sort.desc);
     });
   }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> thenByParentFolderId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'parentFolderId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy>
+      thenByParentFolderIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'parentFolderId', Sort.desc);
+    });
+  }
 }
 
 extension IsarFolderQueryWhereDistinct
@@ -2941,10 +3681,22 @@ extension IsarFolderQueryWhereDistinct
     });
   }
 
+  QueryBuilder<IsarFolder, IsarFolder, QDistinct> distinctByDeletedAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'deletedAt');
+    });
+  }
+
   QueryBuilder<IsarFolder, IsarFolder, QDistinct> distinctById(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'id', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QDistinct> distinctByIsDeleted() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isDeleted');
     });
   }
 
@@ -2958,6 +3710,14 @@ extension IsarFolderQueryWhereDistinct
   QueryBuilder<IsarFolder, IsarFolder, QDistinct> distinctByNoteIds() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'noteIds');
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QDistinct> distinctByParentFolderId(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'parentFolderId',
+          caseSensitive: caseSensitive);
     });
   }
 }
@@ -2989,9 +3749,21 @@ extension IsarFolderQueryProperty
     });
   }
 
+  QueryBuilder<IsarFolder, DateTime?, QQueryOperations> deletedAtProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'deletedAt');
+    });
+  }
+
   QueryBuilder<IsarFolder, String?, QQueryOperations> idProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'id');
+    });
+  }
+
+  QueryBuilder<IsarFolder, bool, QQueryOperations> isDeletedProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isDeleted');
     });
   }
 
@@ -3006,6 +3778,12 @@ extension IsarFolderQueryProperty
       return query.addPropertyName(r'noteIds');
     });
   }
+
+  QueryBuilder<IsarFolder, String?, QQueryOperations> parentFolderIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'parentFolderId');
+    });
+  }
 }
 
 // **************************************************************************
@@ -3017,7 +3795,7 @@ extension IsarFolderQueryProperty
 
 const IsarNotePageSchema = Schema(
   name: r'IsarNotePage',
-  id: -((0x78FF10C0 << 32) | 0x43735F41),
+  id: -8718705821563969345,
   properties: {
     r'blocks': PropertySchema(
       id: 0,
@@ -3516,7 +4294,7 @@ extension IsarNotePageQueryObject
 
 const IsarNoteBlockSchema = Schema(
   name: r'IsarNoteBlock',
-  id: -((0x4088D1DA << 32) | 0xC5090EC7),
+  id: -4650197352798817991,
   properties: {
     r'height': PropertySchema(
       id: 0,
@@ -4540,7 +5318,7 @@ extension IsarNoteBlockQueryObject
 
 const IsarRichTextContentSchema = Schema(
   name: r'IsarRichTextContent',
-  id: -((0x2036C225 << 32) | 0xB8C1B33A),
+  id: -2321256125225349946,
   properties: {
     r'segments': PropertySchema(
       id: 0,
@@ -4731,7 +5509,7 @@ extension IsarRichTextContentQueryObject on QueryBuilder<IsarRichTextContent,
 
 const IsarTextSegmentSchema = Schema(
   name: r'IsarTextSegment',
-  id: ((0x49046ED9 << 32) | 0x10F64B40),
+  id: 5261452143247117120,
   properties: {
     r'colorValue': PropertySchema(
       id: 0,
@@ -5156,7 +5934,7 @@ extension IsarTextSegmentQueryObject
 
 const IsarStrokeSchema = Schema(
   name: r'IsarStroke',
-  id: -((0x2629A6C3 << 32) | 0xC9C70626),
+  id: -2749912407320495654,
   properties: {
     r'colorValue': PropertySchema(
       id: 0,
@@ -5645,7 +6423,7 @@ extension IsarStrokeQueryObject
 
 const IsarPointSchema = Schema(
   name: r'IsarPoint',
-  id: -((0x3864E40C << 32) | 0x5D287BEB),
+  id: -4063623505548704747,
   properties: {
     r'x': PropertySchema(
       id: 0,

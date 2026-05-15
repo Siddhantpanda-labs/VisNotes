@@ -12,6 +12,7 @@ class NoteMapper {
       ..title = domain.title
       ..createdAt = domain.createdAt
       ..updatedAt = domain.updatedAt
+      ..parentFolderId = domain.parentFolderId
       ..pages = domain.pages.map((p) => _toIsarPage(p)).toList();
   }
 
@@ -21,6 +22,7 @@ class NoteMapper {
       title: isar.title ?? '',
       createdAt: isar.createdAt ?? DateTime.now(),
       updatedAt: isar.updatedAt ?? DateTime.now(),
+      parentFolderId: isar.parentFolderId,
       pages: isar.pages.map((p) => _toDomainPage(p)).toList(),
     );
   }

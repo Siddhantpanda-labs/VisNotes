@@ -7,6 +7,7 @@ class NoteDocument extends Equatable {
   final List<NotePage> pages;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? parentFolderId;
 
   const NoteDocument({
     required this.id,
@@ -14,6 +15,7 @@ class NoteDocument extends Equatable {
     required this.pages,
     required this.createdAt,
     required this.updatedAt,
+    this.parentFolderId,
   });
 
   NoteDocument copyWith({
@@ -22,6 +24,7 @@ class NoteDocument extends Equatable {
     List<NotePage>? pages,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? parentFolderId,
   }) {
     return NoteDocument(
       id: id ?? this.id,
@@ -29,11 +32,12 @@ class NoteDocument extends Equatable {
       pages: pages ?? this.pages,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      parentFolderId: parentFolderId ?? this.parentFolderId,
     );
   }
 
   @override
-  List<Object?> get props => [id, title, pages, createdAt, updatedAt];
+  List<Object?> get props => [id, title, pages, createdAt, updatedAt, parentFolderId];
 }
 
 class NotePage extends Equatable {

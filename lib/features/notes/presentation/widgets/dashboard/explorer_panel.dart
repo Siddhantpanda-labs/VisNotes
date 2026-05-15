@@ -53,11 +53,28 @@ class ExplorerPanel extends StatelessWidget {
             child: BlocBuilder<DashboardBloc, DashboardState>(
               builder: (context, state) {
                 if (state is DashboardLoaded) {
+                  // Build root level
+                  final rootFolders = state.allFolders.where((f) => f.parentFolderId == null).toList();
+                  final rootNotes = state.notes.where((n) => n.parentFolderId == null).toList();
+
                   return ListView(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     children: [
-                      ...state.folders.map((f) => ExplorerFolderTile(folder: f)),
-                      ...state.notes.map((n) => ExplorerNoteTile(note: n)),
+                      ListTile(
+                        leading: const Icon(Icons.delete_outline_rounded, size: 20, color: Colors.redAccent),
+                        title: Text('Recycle Bin', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold)),
+                        onTap: () {
+                          context.read<DashboardBloc>().add(LoadTrash());
+                          onClose();
+                        },
+                      ),
+                      const Divider(height: 1),
+                      ...rootFolders.map((f) => RecursiveFolderTile(
+                        folder: f, 
+                        allFolders: state.allFolders,
+                        depth: 0,
+                      )),
+                      ...rootNotes.map((n) => ExplorerNoteTile(note: n)),
                     ],
                   );
                 }
@@ -71,30 +88,70 @@ class ExplorerPanel extends StatelessWidget {
   }
 }
 
-class ExplorerFolderTile extends StatelessWidget {
+class RecursiveFolderTile extends StatefulWidget {
   final IsarFolder folder;
-  const ExplorerFolderTile({super.key, required this.folder});
+  final List<IsarFolder> allFolders;
+  final int depth;
+
+  const RecursiveFolderTile({
+    super.key, 
+    required this.folder, 
+    required this.allFolders,
+    required this.depth,
+  });
+
+  @override
+  State<RecursiveFolderTile> createState() => _RecursiveFolderTileState();
+}
+
+class _RecursiveFolderTileState extends State<RecursiveFolderTile> {
+  bool _isExpanded = false;
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: const Icon(Icons.folder_outlined, size: 20, color: Colors.amber),
-      title: Text(
-        folder.name ?? 'Untitled Folder',
-        style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600),
-      ),
-      onTap: () {},
+    final children = widget.allFolders.where((f) => f.parentFolderId == widget.folder.id).toList();
+    
+    return Column(
+      children: [
+        ListTile(
+          contentPadding: EdgeInsets.only(left: 16.0 + (widget.depth * 20.0), right: 16.0),
+          leading: Icon(
+            _isExpanded ? Icons.folder_open_outlined : Icons.folder_outlined, 
+            size: 20, 
+            color: Colors.amber,
+          ),
+          trailing: children.isNotEmpty 
+            ? Icon(_isExpanded ? Icons.expand_more : Icons.chevron_right, size: 16)
+            : null,
+          title: Text(
+            widget.folder.name ?? 'Untitled Folder',
+            style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600),
+          ),
+          onTap: () {
+            setState(() => _isExpanded = !_isExpanded);
+            context.read<DashboardBloc>().add(OpenFolder(widget.folder.id));
+          },
+        ),
+        if (_isExpanded)
+          ...children.map((child) => RecursiveFolderTile(
+            folder: child, 
+            allFolders: widget.allFolders,
+            depth: widget.depth + 1,
+          )),
+      ],
     );
   }
 }
 
 class ExplorerNoteTile extends StatelessWidget {
   final IsarNoteDocument note;
-  const ExplorerNoteTile({super.key, required this.note});
+  final int depth;
+  const ExplorerNoteTile({super.key, required this.note, this.depth = 0});
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
+      contentPadding: EdgeInsets.only(left: 16.0 + (depth * 20.0), right: 16.0),
       leading: const Icon(Icons.note_alt_outlined, size: 20, color: Colors.blueAccent),
       title: Text(
         note.title ?? 'Untitled Note',
@@ -109,7 +166,7 @@ class ExplorerNoteTile extends StatelessWidget {
           ),
         ).then((_) {
           if (context.mounted) {
-            context.read<DashboardBloc>().add(LoadDashboard());
+            context.read<DashboardBloc>().add(const LoadDashboard());
           }
         });
       },

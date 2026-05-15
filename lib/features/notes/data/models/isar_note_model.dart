@@ -18,6 +18,10 @@ class IsarNoteDocument {
   double dashboardY = 0;
   bool isPinned = false;
   
+  String? parentFolderId;
+  bool isDeleted = false;
+  DateTime? deletedAt;
+  
   List<IsarNotePage> pages = [];
 }
 
@@ -31,6 +35,10 @@ class IsarFolder {
   String? name;
   double dashboardX = 0;
   double dashboardY = 0;
+  
+  String? parentFolderId;
+  bool isDeleted = false;
+  DateTime? deletedAt;
   
   // List of Note IDs inside this folder
   List<String> noteIds = [];
