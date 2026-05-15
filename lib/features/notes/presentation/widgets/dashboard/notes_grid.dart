@@ -16,6 +16,33 @@ class NotesGridSection extends StatelessWidget {
     return BlocBuilder<DashboardBloc, DashboardState>(
       builder: (context, state) {
         if (state is DashboardLoaded) {
+          // Sort and Filter Notes
+          var notes = List<IsarNoteDocument>.from(state.notes);
+          
+          // Filter by Tag
+          if (state.activeTagFilter != null) {
+            notes = notes.where((n) => n.tags.contains(state.activeTagFilter)).toList();
+          }
+
+          // Sort: Pinned first
+          notes.sort((a, b) {
+            if (a.isPinned && !b.isPinned) return -1;
+            if (!a.isPinned && b.isPinned) return 1;
+            return b.updatedAt?.compareTo(a.updatedAt ?? DateTime(0)) ?? 0;
+          });
+
+          if (state.isListView) {
+            return SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => NoteListTile(note: notes[index]),
+                  childCount: notes.length,
+                ),
+              ),
+            );
+          }
+
           return SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             sliver: SliverGrid(
@@ -26,8 +53,8 @@ class NotesGridSection extends StatelessWidget {
                 childAspectRatio: 0.8,
               ),
               delegate: SliverChildBuilderDelegate(
-                (context, index) => NoteListItem(note: state.notes[index]),
-                childCount: state.notes.length,
+                (context, index) => NoteListItem(note: notes[index]),
+                childCount: notes.length,
               ),
             ),
           );
@@ -52,16 +79,11 @@ class _NoteListItemState extends State<NoteListItem> {
   void _showContextMenu(BuildContext context) {
     _hideContextMenu();
     
-    final RenderBox renderBox = context.findRenderObject() as RenderBox;
-    final offset = renderBox.localToGlobal(Offset.zero);
-    final size = renderBox.size;
-
     _overlayEntry = OverlayEntry(
       builder: (context) => NodeActionBar(
         id: widget.note.id!,
         isFolder: false,
         currentName: widget.note.title ?? '',
-        position: Offset(offset.dx + (size.width / 2) - 80, offset.dy - 60),
         onClose: _hideContextMenu,
       ),
     );
@@ -142,11 +164,35 @@ class _NoteListItemState extends State<NoteListItem> {
                               color: Colors.black38,
                             ),
                           ),
+                          if (widget.note.tags.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 4,
+                              runSpacing: 4,
+                              children: widget.note.tags.take(2).map((tag) => Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.03),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  '#$tag',
+                                  style: GoogleFonts.outfit(fontSize: 8, color: Colors.black45, fontWeight: FontWeight.bold),
+                                ),
+                              )).toList(),
+                            ),
+                          ],
                         ],
                       ),
                     ),
                   ],
                 ),
+                if (widget.note.isPinned)
+                  const Positioned(
+                    top: 12,
+                    left: 12,
+                    child: Icon(Icons.push_pin, size: 14, color: Colors.blueAccent),
+                  ),
                 if (isSelectionMode)
                   Positioned(
                     top: 12,
@@ -190,31 +236,143 @@ class _NoteListItemState extends State<NoteListItem> {
           childWhenDragging: Opacity(opacity: 0.3, child: item),
           child: GestureDetector(
             onSecondaryTapDown: (_) => _showContextMenu(context),
-            onTap: () {
-              if (isSelectionMode) {
-                context.read<DashboardBloc>().add(ToggleSelection(id: widget.note.id!, isFolder: false));
-              } else if (state is DashboardLoaded && state.isTrashView) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Restore note to edit it')),
-                );
-              } else {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => NoteEditorPage(
-                      initialDocument: NoteMapper.toDomain(widget.note),
-                    ),
-                  ),
-                ).then((_) {
-                  if (context.mounted) {
-                    context.read<DashboardBloc>().add(const LoadDashboard(useCurrentFolder: true));
-                  }
-                });
-              }
-            },
+            onTap: () => _openNote(context, state),
             child: item,
           ),
         );
       },
     );
+  }
+
+  void _openNote(BuildContext context, DashboardState state) {
+    if (state is DashboardLoaded && state.isSelectionMode) {
+      context.read<DashboardBloc>().add(ToggleSelection(id: widget.note.id!, isFolder: false));
+    } else if (state is DashboardLoaded && state.isTrashView) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Restore note to edit it')),
+      );
+    } else {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => NoteEditorPage(
+            initialDocument: NoteMapper.toDomain(widget.note),
+          ),
+        ),
+      ).then((_) {
+        if (context.mounted) {
+          context.read<DashboardBloc>().add(const LoadDashboard(useCurrentFolder: true));
+        }
+      });
+    }
+  }
+}
+
+class NoteListTile extends StatefulWidget {
+  final IsarNoteDocument note;
+  const NoteListTile({super.key, required this.note});
+
+  @override
+  State<NoteListTile> createState() => _NoteListTileState();
+}
+
+class _NoteListTileState extends State<NoteListTile> {
+  OverlayEntry? _overlayEntry;
+
+  void _showContextMenu(BuildContext context) {
+    _hideContextMenu();
+    
+    _overlayEntry = OverlayEntry(
+      builder: (context) => NodeActionBar(
+        id: widget.note.id!,
+        isFolder: false,
+        currentName: widget.note.title ?? '',
+        onClose: _hideContextMenu,
+      ),
+    );
+    Overlay.of(context).insert(_overlayEntry!);
+  }
+
+  void _hideContextMenu() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+  }
+
+  @override
+  void dispose() {
+    _hideContextMenu();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<DashboardBloc, DashboardState>(
+      builder: (context, state) {
+        final bool isSelected = state is DashboardLoaded && state.selectedNoteIds.contains(widget.note.id);
+        
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: InkWell(
+            onSecondaryTapDown: (_) => _showContextMenu(context),
+            onTap: () => _openNote(context, state),
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: isSelected ? Colors.blue.withOpacity(0.05) : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: isSelected ? Colors.blue.withOpacity(0.3) : Colors.black.withOpacity(0.03)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.description_outlined, color: Colors.black26, size: 20),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.note.title ?? 'Untitled Note',
+                          style: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 14),
+                        ),
+                        Text(
+                          'Last edited ${DateFormatter.formatRelative(widget.note.updatedAt)}',
+                          style: GoogleFonts.outfit(fontSize: 11, color: Colors.black38),
+                        ),
+                        if (widget.note.tags.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Wrap(
+                            spacing: 4,
+                            children: widget.note.tags.map((tag) => Text(
+                              '#$tag',
+                              style: GoogleFonts.outfit(fontSize: 9, color: Colors.blueAccent.withOpacity(0.6), fontWeight: FontWeight.bold),
+                            )).toList(),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  if (widget.note.isPinned)
+                    const Icon(Icons.push_pin, size: 14, color: Colors.blueAccent),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _openNote(BuildContext context, DashboardState state) {
+    if (state is DashboardLoaded && state.isSelectionMode) {
+      context.read<DashboardBloc>().add(ToggleSelection(id: widget.note.id!, isFolder: false));
+    } else if (state is DashboardLoaded && state.isTrashView) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Restore note to edit it')));
+    } else {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (context) => NoteEditorPage(initialDocument: NoteMapper.toDomain(widget.note))),
+      ).then((_) {
+        if (context.mounted) context.read<DashboardBloc>().add(const LoadDashboard(useCurrentFolder: true));
+      });
+    }
   }
 }

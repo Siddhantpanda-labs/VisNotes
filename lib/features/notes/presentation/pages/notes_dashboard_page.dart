@@ -5,6 +5,7 @@ import '../widgets/dashboard/folder_carousel.dart';
 import '../widgets/dashboard/notes_grid.dart';
 import '../widgets/dashboard/dashboard_toolbar.dart';
 import '../widgets/dashboard/explorer_panel.dart';
+import '../widgets/dashboard/left_sidebar.dart';
 import '../bloc/dashboard/dashboard_bloc.dart';
 import '../../data/models/isar_note_model.dart';
 
@@ -22,191 +23,212 @@ class _NotesDashboardPageState extends State<NotesDashboardPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9F9F9), // Very clean off-white
-      body: Stack(
+      body: Row(
         children: [
-          // Main Content
-          SafeArea(
-            child: CustomScrollView(
-              slivers: [
-                // Header
-                SliverToBoxAdapter(
-                  child: BlocBuilder<DashboardBloc, DashboardState>(
-                    builder: (context, state) {
-                      final currentFolder = (state is DashboardLoaded) ? state.currentFolder : null;
-                      final isRoot = currentFolder == null;
+          const LeftSidebar(),
+          Expanded(
+            child: Stack(
+              children: [
+                // Main Content
+                SafeArea(
+                  child: CustomScrollView(
+                    slivers: [
+                      // Header
+                      SliverToBoxAdapter(
+                        child: BlocBuilder<DashboardBloc, DashboardState>(
+                          builder: (context, state) {
+                            final currentFolder = (state is DashboardLoaded) ? state.currentFolder : null;
+                            final isRoot = currentFolder == null;
 
-                      return Padding(
-                        padding: const EdgeInsets.fromLTRB(30, 40, 30, 20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.only(left: 20),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            return Padding(
+                              padding: const EdgeInsets.fromLTRB(30, 40, 30, 20),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    state is DashboardLoaded && state.isTrashView ? 'RECYCLE BIN' : 
-                                    (isRoot ? 'MY NOTES' : (currentFolder.name?.toUpperCase() ?? 'FOLDER')),
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: 4,
-                                      color: Colors.black.withOpacity(0.6),
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 20),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          state is DashboardLoaded && state.isTrashView ? 'RECYCLE BIN' : 
+                                          (isRoot ? 'MY NOTES' : (currentFolder.name?.toUpperCase() ?? 'FOLDER')),
+                                          style: GoogleFonts.outfit(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.w900,
+                                            letterSpacing: 4,
+                                            color: Colors.black.withOpacity(0.6),
+                                          ),
+                                        ),
+                                        Row(
+                                          children: [
+                                            if (state is DashboardLoaded) ...[
+                                              IconButton(
+                                                onPressed: () => context.read<DashboardBloc>().add(ToggleViewMode()),
+                                                icon: Icon(
+                                                  state.isListView ? Icons.grid_view_rounded : Icons.view_list_rounded,
+                                                  size: 20,
+                                                  color: Colors.black38,
+                                                ),
+                                                tooltip: state.isListView ? 'Grid View' : 'List View',
+                                              ),
+                                            ],
+                                            if (state is DashboardLoaded && state.isTrashView && state.notes.isNotEmpty)
+                                              TextButton.icon(
+                                                onPressed: () => context.read<DashboardBloc>().add(EmptyTrash()),
+                                                icon: const Icon(Icons.delete_sweep_outlined, size: 18, color: Colors.redAccent),
+                                                label: Text('Empty Trash', style: GoogleFonts.outfit(color: Colors.redAccent, fontSize: 12)),
+                                              ),
+                                          ],
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  if (state is DashboardLoaded && state.isTrashView && state.notes.isNotEmpty)
-                                    TextButton.icon(
-                                      onPressed: () => context.read<DashboardBloc>().add(EmptyTrash()),
-                                      icon: const Icon(Icons.delete_sweep_outlined, size: 18, color: Colors.redAccent),
-                                      label: Text('Empty Trash', style: GoogleFonts.outfit(color: Colors.redAccent, fontSize: 12)),
-                                    ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            
-                            SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Row(
-                                children: [
-                                  // Home / Root
-                                  _BreadcrumbItem(
-                                    label: 'Home',
-                                    isRoot: true,
-                                    onTap: () => context.read<DashboardBloc>().add(const OpenFolder(null)),
-                                  ),
+                                  const SizedBox(height: 16),
                                   
-                                  if (state is DashboardLoaded && state.isTrashView)
-                                    const _BreadcrumbItem(
-                                      label: 'Trash',
-                                      onTap: null, // Just a label
-                                    )
-                                  else if (!isRoot) ...(() {
-                                    final path = <IsarFolder>[];
-                                    IsarFolder? current = currentFolder;
-                                    final allFolders = (state as DashboardLoaded).allFolders;
-                                    
-                                    while (current != null) {
-                                      path.insert(0, current!);
-                                      if (current!.parentFolderId == null) break;
-                                      current = allFolders.where((f) => f.id == current!.parentFolderId).firstOrNull;
-                                    }
-                                    
-                                    return path.map((IsarFolder f) => _BreadcrumbItem(
-                                      id: f.id,
-                                      label: f.name ?? 'Untitled',
-                                      onTap: () => context.read<DashboardBloc>().add(OpenFolder(f.id)),
-                                    ));
-                                  })(),
+                                  SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    child: Row(
+                                      children: [
+                                        // Home / Root
+                                        _BreadcrumbItem(
+                                          label: 'Home',
+                                          isRoot: true,
+                                          onTap: () => context.read<DashboardBloc>().add(const OpenFolder(null)),
+                                        ),
+                                        
+                                        if (state is DashboardLoaded && state.isTrashView)
+                                          const _BreadcrumbItem(
+                                            label: 'Trash',
+                                            onTap: null,
+                                          )
+                                        else if (!isRoot) ...(() {
+                                          final path = <IsarFolder>[];
+                                          IsarFolder? current = currentFolder;
+                                          final allFolders = (state as DashboardLoaded).allFolders;
+                                          
+                                          while (current != null) {
+                                            path.insert(0, current!);
+                                            if (current!.parentFolderId == null) break;
+                                            current = allFolders.where((f) => f.id == current!.parentFolderId).firstOrNull;
+                                          }
+                                          
+                                          return path.map((IsarFolder f) => _BreadcrumbItem(
+                                            id: f.id,
+                                            label: f.name ?? 'Untitled',
+                                            onTap: () => context.read<DashboardBloc>().add(OpenFolder(f.id)),
+                                          ));
+                                        })(),
+                                      ],
+                                    ),
+                                  ),
                                 ],
                               ),
-                            ),
-                          ],
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
-                ),
+                      ),
 
-                // Folders Section
-                SliverToBoxAdapter(
-                  child: BlocBuilder<DashboardBloc, DashboardState>(
-                    builder: (context, state) {
-                      if (state is DashboardLoaded && state.folders.isNotEmpty) {
-                        return const FoldersSection();
-                      }
-                      return const SizedBox.shrink();
-                    },
-                  ),
-                ),
+                      // Folders Section
+                      SliverToBoxAdapter(
+                        child: BlocBuilder<DashboardBloc, DashboardState>(
+                          builder: (context, state) {
+                            if (state is DashboardLoaded && state.folders.isNotEmpty) {
+                              return const FoldersSection();
+                            }
+                            return const SizedBox.shrink();
+                          },
+                        ),
+                      ),
 
-                // Notes Section Label
-                SliverToBoxAdapter(
-                  child: BlocBuilder<DashboardBloc, DashboardState>(
-                    builder: (context, state) {
-                      if (state is DashboardLoaded && state.notes.isEmpty && state.folders.isEmpty) {
-                        return Center(
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 100),
-                            child: Column(
-                              children: [
-                                Icon(Icons.delete_outline, size: 64, color: Colors.black.withOpacity(0.1)),
-                                const SizedBox(height: 16),
-                                Text(
-                                  state.isTrashView ? 'Trash is empty' : 'No items here',
-                                  style: GoogleFonts.outfit(color: Colors.black26),
+                      // Notes Section Label
+                      SliverToBoxAdapter(
+                        child: BlocBuilder<DashboardBloc, DashboardState>(
+                          builder: (context, state) {
+                            if (state is DashboardLoaded && state.notes.isEmpty && state.folders.isEmpty) {
+                              return Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.only(top: 100),
+                                  child: Column(
+                                    children: [
+                                      Icon(Icons.delete_outline, size: 64, color: Colors.black.withOpacity(0.1)),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        state.isTrashView ? 'Trash is empty' : 'No items here',
+                                        style: GoogleFonts.outfit(color: Colors.black26),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }
-                      
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
-                        child: Text(
-                          state is DashboardLoaded && state.isTrashView ? 'Deleted Items' : 'Recent Notes',
-                          style: GoogleFonts.outfit(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black54,
-                          ),
+                              );
+                            }
+                            
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
+                              child: Text(
+                                state is DashboardLoaded && state.isTrashView ? 'Deleted Items' : 'Recent Notes',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black54,
+                                ),
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
+                      ),
+
+                      // Notes Grid
+                      const NotesGridSection(),
+                      
+                      const SliverToBoxAdapter(child: SizedBox(height: 120)),
+                    ],
                   ),
                 ),
 
-                // Notes Grid
-                const NotesGridSection(),
-                
-                // Bottom Padding for Toolbar
-                const SliverToBoxAdapter(child: SizedBox(height: 120)),
-              ],
-            ),
-          ),
-
-          // Bottom Compact Toolbar
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 30,
-            child: Center(
-              child: BottomCompactToolbar(
-                onExplorerToggle: () => setState(() => _isExplorerOpen = !_isExplorerOpen),
-                isExplorerOpen: _isExplorerOpen,
-              ),
-            ),
-          ),
-
-          // Explorer Panel
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 400),
-            curve: Curves.easeInOutCubic,
-            left: _isExplorerOpen ? 20 : -350,
-            top: 40,
-            bottom: 120,
-            child: ExplorerPanel(onClose: () => setState(() => _isExplorerOpen = false)),
-          ),
-
-          // Bulk Selection Toolbar
-          BlocBuilder<DashboardBloc, DashboardState>(
-            builder: (context, state) {
-              if (state is DashboardLoaded && state.isSelectionMode) {
-                return Positioned(
+                // Bottom Compact Toolbar
+                Positioned(
                   left: 0,
                   right: 0,
                   bottom: 30,
                   child: Center(
-                    child: _BulkSelectionToolbar(
-                      selectedCount: state.selectedNoteIds.length + state.selectedFolderIds.length,
+                    child: BottomCompactToolbar(
+                      onExplorerToggle: () => setState(() => _isExplorerOpen = !_isExplorerOpen),
+                      isExplorerOpen: _isExplorerOpen,
                     ),
                   ),
-                );
-              }
-              return const SizedBox.shrink();
-            },
+                ),
+
+                // Explorer Panel
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 400),
+                  curve: Curves.easeInOutCubic,
+                  left: _isExplorerOpen ? 20 : -350,
+                  top: 40,
+                  bottom: 120,
+                  child: ExplorerPanel(onClose: () => setState(() => _isExplorerOpen = false)),
+                ),
+
+                // Bulk Selection Toolbar
+                BlocBuilder<DashboardBloc, DashboardState>(
+                  builder: (context, state) {
+                    if (state is DashboardLoaded && state.isSelectionMode) {
+                      return Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 30,
+                        child: Center(
+                          child: _BulkSelectionToolbar(
+                            selectedCount: state.selectedNoteIds.length + state.selectedFolderIds.length,
+                          ),
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+              ],
+            ),
           ),
         ],
       ),

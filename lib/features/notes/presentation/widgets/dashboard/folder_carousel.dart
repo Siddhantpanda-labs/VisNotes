@@ -55,7 +55,6 @@ class _FolderItemState extends State<FolderItem> {
         id: widget.folder.id!,
         isFolder: true,
         currentName: widget.folder.name ?? '',
-        position: Offset(offset.dx + (size.width / 2) - 80, offset.dy - 60),
         onClose: _hideContextMenu,
       ),
     );
@@ -81,6 +80,11 @@ class _FolderItemState extends State<FolderItem> {
         final bool isSelected = state is DashboardLoaded && state.selectedFolderIds.contains(widget.folder.id);
         final bool isSelectionMode = state is DashboardLoaded && state.isSelectionMode;
 
+        final folderColor = widget.folder.colorValue != null ? Color(widget.folder.colorValue!) : Colors.amber;
+        final folderIcon = widget.folder.iconCodePoint != null 
+            ? IconData(widget.folder.iconCodePoint!, fontFamily: 'MaterialIcons') 
+            : Icons.folder;
+
         final item = Container(
           width: 140,
           height: 100,
@@ -95,7 +99,8 @@ class _FolderItemState extends State<FolderItem> {
               ),
             ],
             border: Border.all(
-              color: isSelected ? Colors.blue.withOpacity(0.5) : Colors.black.withOpacity(0.05),
+              color: isSelected ? Colors.blue.withOpacity(0.5) : 
+                     (widget.folder.colorValue != null ? folderColor.withOpacity(0.3) : Colors.black.withOpacity(0.05)),
               width: isSelected ? 2 : 1,
             ),
           ),
@@ -105,7 +110,7 @@ class _FolderItemState extends State<FolderItem> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.folder, color: Colors.amber, size: 40),
+                    Icon(folderIcon, color: folderColor, size: 40),
                     const SizedBox(height: 8),
                     Text(
                       widget.folder.name ?? 'Untitled',
@@ -120,6 +125,12 @@ class _FolderItemState extends State<FolderItem> {
                   ],
                 ),
               ),
+              if (widget.folder.isPinned)
+                const Positioned(
+                  top: 12,
+                  left: 12,
+                  child: Icon(Icons.push_pin, size: 14, color: Colors.blueAccent),
+                ),
               if (isSelectionMode)
                 Positioned(
                   top: 8,

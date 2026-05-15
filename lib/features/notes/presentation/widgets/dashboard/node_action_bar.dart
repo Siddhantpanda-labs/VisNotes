@@ -8,7 +8,6 @@ class NodeActionBar extends StatelessWidget {
   final String id;
   final bool isFolder;
   final String currentName;
-  final Offset position;
   final VoidCallback onClose;
 
   const NodeActionBar({
@@ -16,7 +15,6 @@ class NodeActionBar extends StatelessWidget {
     required this.id,
     required this.isFolder,
     required this.currentName,
-    required this.position,
     required this.onClose,
   });
 
@@ -33,13 +31,15 @@ class NodeActionBar extends StatelessWidget {
           ),
         ),
         Positioned(
-          left: position.dx,
-          top: position.dy,
-          child: Material(
-            color: Colors.transparent,
-            child: TapRegion(
-              onTapOutside: (_) => onClose(),
-              child: Container(
+          bottom: 100,
+          left: 260,
+          right: 0,
+          child: Center(
+            child: Material(
+              color: Colors.transparent,
+              child: TapRegion(
+                onTapOutside: (_) => onClose(),
+                child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: const Color(0xFF333333),
@@ -78,12 +78,53 @@ class NodeActionBar extends StatelessWidget {
                           ),
                         ] else ...[
                           IconButton(
+                            icon: BlocBuilder<DashboardBloc, DashboardState>(
+                              builder: (context, state) {
+                                bool isPinned = false;
+                                if (state is DashboardLoaded) {
+                                  if (isFolder) {
+                                    isPinned = state.folders.any((f) => f.id == id && f.isPinned);
+                                  } else {
+                                    isPinned = state.notes.any((n) => n.id == id && n.isPinned);
+                                  }
+                                }
+                                return Icon(
+                                  isPinned ? Icons.push_pin : Icons.push_pin_outlined, 
+                                  color: isPinned ? Colors.blueAccent : Colors.white, 
+                                  size: 18
+                                );
+                              },
+                            ),
+                            onPressed: () {
+                              context.read<DashboardBloc>().add(TogglePinNode(id: id, isFolder: isFolder));
+                              onClose();
+                            },
+                            tooltip: 'Pin',
+                          ),
+                          IconButton(
                             icon: const Icon(Icons.edit_outlined, color: Colors.white, size: 18),
                             onPressed: () {
                               onClose();
                               _showRenameDialog(context);
                             },
                             tooltip: 'Rename',
+                          ),
+                          if (isFolder)
+                            IconButton(
+                              icon: const Icon(Icons.palette_outlined, color: Colors.white, size: 18),
+                              onPressed: () {
+                                onClose();
+                                _showColorIconPicker(context);
+                              },
+                              tooltip: 'Customize',
+                            ),
+                          IconButton(
+                            icon: const Icon(Icons.label_outline_rounded, color: Colors.white, size: 18),
+                            onPressed: () {
+                              onClose();
+                              _showTagDialog(context);
+                            },
+                            tooltip: 'Tags',
                           ),
                           IconButton(
                             icon: const Icon(Icons.drive_file_move_outlined, color: Colors.white, size: 18),
@@ -118,7 +159,111 @@ class NodeActionBar extends StatelessWidget {
             ),
           ),
         ),
+      ),
       ],
+    );
+  }
+
+  void _showColorIconPicker(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Customize Folder', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Color', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              children: [
+                0xFFFFA000, 0xFFF44336, 0xFFE91E63, 0xFF9C27B0, 0xFF673AB7, 
+                0xFF3F51B5, 0xFF2196F3, 0xFF00BCD4, 0xFF009688, 0xFF4CAF50
+              ].map((color) => GestureDetector(
+                onTap: () {
+                  context.read<DashboardBloc>().add(UpdateFolderCustomization(id: id, colorValue: color));
+                  Navigator.pop(ctx);
+                },
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: Color(color),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              )).toList(),
+            ),
+            const SizedBox(height: 24),
+            Text('Icon', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              children: [
+                Icons.folder, Icons.work, Icons.home, Icons.favorite, Icons.star,
+                Icons.book, Icons.code, Icons.image, Icons.music_note, Icons.shopping_bag
+              ].map((icon) => IconButton(
+                onPressed: () {
+                  context.read<DashboardBloc>().add(UpdateFolderCustomization(id: id, iconCodePoint: icon.codePoint));
+                  Navigator.pop(ctx);
+                },
+                icon: Icon(icon, color: Colors.black54),
+              )).toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showTagDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => BlocBuilder<DashboardBloc, DashboardState>(
+        builder: (context, state) {
+          if (state is! DashboardLoaded) return const SizedBox.shrink();
+          
+          final currentTags = isFolder 
+              ? state.folders.firstWhere((f) => f.id == id).tags 
+              : state.notes.firstWhere((n) => n.id == id).tags;
+
+          return AlertDialog(
+            title: Text('Tags', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+            content: SizedBox(
+              width: 300,
+              child: state.tags.isEmpty 
+                ? const Text('No tags created yet. Create one from the sidebar!')
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: state.tags.map((tag) {
+                      final isTagged = currentTags.contains(tag.name);
+                      return CheckboxListTile(
+                        title: Text(tag.name!, style: GoogleFonts.outfit()),
+                        value: isTagged,
+                        activeColor: Color(tag.colorValue),
+                        onChanged: (val) {
+                          context.read<DashboardBloc>().add(ToggleTagOnNode(
+                            nodeId: id, 
+                            tagName: tag.name!, 
+                            isFolder: isFolder
+                          ));
+                        },
+                        secondary: Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(color: Color(tag.colorValue), shape: BoxShape.circle),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -274,7 +419,8 @@ class _FolderPickerTile extends StatelessWidget {
               depth: depth + 1,
               onMove: onMove,
               disabledId: disabledId,
-            )),
+            ),
+        ),
       ],
     );
   }

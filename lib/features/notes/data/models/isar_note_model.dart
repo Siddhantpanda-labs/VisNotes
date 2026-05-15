@@ -22,7 +22,19 @@ class IsarNoteDocument {
   bool isDeleted = false;
   DateTime? deletedAt;
   
+  List<String> tags = [];
+  
   List<IsarNotePage> pages = [];
+}
+
+@collection
+class IsarTag {
+  Id isarId = Isar.autoIncrement;
+
+  @Index(unique: true, replace: true)
+  String? id;
+  String? name;
+  int colorValue = 0xFF2196F3; // Default Blue
 }
 
 @collection
@@ -39,6 +51,12 @@ class IsarFolder {
   String? parentFolderId;
   bool isDeleted = false;
   DateTime? deletedAt;
+  
+  bool isPinned = false;
+  int? colorValue; // Custom folder color
+  int? iconCodePoint; // Custom icon
+  
+  List<String> tags = [];
   
   // List of Note IDs inside this folder
   List<String> noteIds = [];

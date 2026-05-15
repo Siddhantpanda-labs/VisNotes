@@ -60,15 +60,6 @@ class ExplorerPanel extends StatelessWidget {
                   return ListView(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     children: [
-                      ListTile(
-                        leading: const Icon(Icons.delete_outline_rounded, size: 20, color: Colors.redAccent),
-                        title: Text('Recycle Bin', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.bold)),
-                        onTap: () {
-                          context.read<DashboardBloc>().add(LoadTrash());
-                          onClose();
-                        },
-                      ),
-                      const Divider(height: 1),
                       ...rootFolders.map((f) => RecursiveFolderTile(
                         folder: f, 
                         allFolders: state.allFolders,

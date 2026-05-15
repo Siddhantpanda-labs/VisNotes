@@ -13,10 +13,11 @@ abstract class DashboardEvent extends Equatable {
 class LoadDashboard extends DashboardEvent {
   final String? folderId;
   final bool useCurrentFolder;
-  const LoadDashboard({this.folderId, this.useCurrentFolder = false});
+  final bool isSilent;
+  const LoadDashboard({this.folderId, this.useCurrentFolder = false, this.isSilent = false});
 
   @override
-  List<Object?> get props => [folderId, useCurrentFolder];
+  List<Object?> get props => [folderId, useCurrentFolder, isSilent];
 }
 
 class OpenFolder extends DashboardEvent {
@@ -116,6 +117,46 @@ class BulkMove extends DashboardEvent {
   const BulkMove({required this.targetFolderId});
 }
 
+class ToggleViewMode extends DashboardEvent {}
+
+class UpdateFolderCustomization extends DashboardEvent {
+  final String id;
+  final int? colorValue;
+  final int? iconCodePoint;
+  const UpdateFolderCustomization({required this.id, this.colorValue, this.iconCodePoint});
+}
+
+class TogglePinNode extends DashboardEvent {
+  final String id;
+  final bool isFolder;
+  const TogglePinNode({required this.id, required this.isFolder});
+}
+
+class LoadTags extends DashboardEvent {}
+
+class CreateTag extends DashboardEvent {
+  final String name;
+  final int colorValue;
+  const CreateTag({required this.name, required this.colorValue});
+}
+
+class DeleteTag extends DashboardEvent {
+  final String id;
+  const DeleteTag({required this.id});
+}
+
+class FilterByTag extends DashboardEvent {
+  final String? tagName;
+  const FilterByTag(this.tagName);
+}
+
+class ToggleTagOnNode extends DashboardEvent {
+  final String nodeId;
+  final String tagName;
+  final bool isFolder;
+  const ToggleTagOnNode({required this.nodeId, required this.tagName, required this.isFolder});
+}
+
 // States
 abstract class DashboardState extends Equatable {
   const DashboardState();
@@ -137,6 +178,9 @@ class DashboardLoaded extends DashboardState {
   final Set<String> selectedFolderIds;
   final bool isSelectionMode;
   final bool isTrashView;
+  final bool isListView;
+  final List<IsarTag> tags;
+  final String? activeTagFilter;
 
   const DashboardLoaded({
     required this.notes, 
@@ -148,6 +192,9 @@ class DashboardLoaded extends DashboardState {
     this.selectedFolderIds = const {},
     this.isSelectionMode = false,
     this.isTrashView = false,
+    this.isListView = false,
+    this.tags = const [],
+    this.activeTagFilter,
   });
 
   DashboardLoaded copyWith({
@@ -160,6 +207,9 @@ class DashboardLoaded extends DashboardState {
     Set<String>? selectedFolderIds,
     bool? isSelectionMode,
     bool? isTrashView,
+    bool? isListView,
+    List<IsarTag>? tags,
+    String? activeTagFilter,
   }) {
     return DashboardLoaded(
       notes: notes ?? this.notes,
@@ -171,13 +221,17 @@ class DashboardLoaded extends DashboardState {
       selectedFolderIds: selectedFolderIds ?? this.selectedFolderIds,
       isSelectionMode: isSelectionMode ?? this.isSelectionMode,
       isTrashView: isTrashView ?? this.isTrashView,
+      isListView: isListView ?? this.isListView,
+      tags: tags ?? this.tags,
+      activeTagFilter: activeTagFilter ?? this.activeTagFilter,
     );
   }
 
   @override
   List<Object?> get props => [
     notes, folders, allFolders, currentFolderId, currentFolder, 
-    selectedNoteIds, selectedFolderIds, isSelectionMode, isTrashView
+    selectedNoteIds, selectedFolderIds, isSelectionMode, isTrashView,
+    isListView, tags, activeTagFilter,
   ];
 }
 
@@ -207,6 +261,14 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     on<ClearSelection>(_onClearSelection);
     on<BulkDelete>(_onBulkDelete);
     on<BulkMove>(_onBulkMove);
+    on<ToggleViewMode>(_onToggleViewMode);
+    on<UpdateFolderCustomization>(_onUpdateFolderCustomization);
+    on<TogglePinNode>(_onTogglePinNode);
+    on<LoadTags>(_onLoadTags);
+    on<CreateTag>(_onCreateTag);
+    on<DeleteTag>(_onDeleteTag);
+    on<FilterByTag>(_onFilterByTag);
+    on<ToggleTagOnNode>(_onToggleTagOnNode);
   }
 
   Future<void> _onLoadDashboard(LoadDashboard event, Emitter<DashboardState> emit) async {
@@ -214,11 +276,15 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         ? (state is DashboardLoaded ? (state as DashboardLoaded).currentFolderId : null)
         : event.folderId;
     
-    emit(DashboardLoading());
+    if (!event.isSilent) {
+      emit(DashboardLoading());
+    }
+    
     try {
       final notes = await repository.getNotesByParent(folderId);
       final folders = await repository.getFoldersByParent(folderId);
       final allFolders = await repository.getAllFolders();
+      final tags = await repository.getAllTags();
       
       IsarFolder? currentFolder;
       if (folderId != null) {
@@ -231,6 +297,8 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         allFolders: allFolders,
         currentFolderId: folderId,
         currentFolder: currentFolder,
+        tags: tags,
+        isListView: state is DashboardLoaded ? (state as DashboardLoaded).isListView : false,
       ));
     } catch (e) {
       emit(DashboardError(e.toString()));
@@ -473,6 +541,107 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       }
       add(const LoadDashboard(useCurrentFolder: true));
       add(ClearSelection());
+    } catch (e) {
+      emit(DashboardError(e.toString()));
+    }
+  }
+
+  void _onToggleViewMode(ToggleViewMode event, Emitter<DashboardState> emit) {
+    if (state is DashboardLoaded) {
+      final currentState = state as DashboardLoaded;
+      emit(currentState.copyWith(isListView: !currentState.isListView));
+    }
+  }
+
+  Future<void> _onUpdateFolderCustomization(UpdateFolderCustomization event, Emitter<DashboardState> emit) async {
+    try {
+      await repository.updateFolderCustomization(
+        event.id, 
+        colorValue: event.colorValue, 
+        iconCodePoint: event.iconCodePoint
+      );
+      add(const LoadDashboard(useCurrentFolder: true));
+    } catch (e) {
+      emit(DashboardError(e.toString()));
+    }
+  }
+
+  Future<void> _onTogglePinNode(TogglePinNode event, Emitter<DashboardState> emit) async {
+    try {
+      await repository.togglePin(event.id, event.isFolder);
+      add(const LoadDashboard(useCurrentFolder: true));
+    } catch (e) {
+      emit(DashboardError(e.toString()));
+    }
+  }
+
+  Future<void> _onLoadTags(LoadTags event, Emitter<DashboardState> emit) async {
+    try {
+      final tags = await repository.getAllTags();
+      if (state is DashboardLoaded) {
+        emit((state as DashboardLoaded).copyWith(tags: tags));
+      }
+    } catch (e) {
+      emit(DashboardError(e.toString()));
+    }
+  }
+
+  Future<void> _onCreateTag(CreateTag event, Emitter<DashboardState> emit) async {
+    try {
+      final tag = IsarTag()
+        ..id = DateTime.now().millisecondsSinceEpoch.toString()
+        ..name = event.name
+        ..colorValue = event.colorValue;
+      await repository.saveTag(tag);
+      add(LoadTags());
+    } catch (e) {
+      emit(DashboardError(e.toString()));
+    }
+  }
+
+  Future<void> _onDeleteTag(DeleteTag event, Emitter<DashboardState> emit) async {
+    try {
+      await repository.deleteTag(event.id);
+      add(LoadTags());
+    } catch (e) {
+      emit(DashboardError(e.toString()));
+    }
+  }
+
+  void _onFilterByTag(FilterByTag event, Emitter<DashboardState> emit) {
+    if (state is DashboardLoaded) {
+      emit((state as DashboardLoaded).copyWith(activeTagFilter: event.tagName));
+    }
+  }
+
+  Future<void> _onToggleTagOnNode(ToggleTagOnNode event, Emitter<DashboardState> emit) async {
+    try {
+      if (event.isFolder) {
+        final folder = await repository.getFolderById(event.nodeId);
+        if (folder != null) {
+          final newTags = List<String>.from(folder.tags);
+          if (newTags.contains(event.tagName)) {
+            newTags.remove(event.tagName);
+          } else {
+            newTags.add(event.tagName);
+          }
+          folder.tags = newTags;
+          await repository.saveFolder(folder);
+        }
+      } else {
+        final note = await repository.getNoteById(event.nodeId);
+        if (note != null) {
+          final newTags = List<String>.from(note.tags);
+          if (newTags.contains(event.tagName)) {
+            newTags.remove(event.tagName);
+          } else {
+            newTags.add(event.tagName);
+          }
+          note.tags = newTags;
+          await repository.saveNote(note);
+        }
+      }
+      add(const LoadDashboard(useCurrentFolder: true, isSilent: true));
     } catch (e) {
       emit(DashboardError(e.toString()));
     }

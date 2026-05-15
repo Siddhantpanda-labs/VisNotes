@@ -13,7 +13,7 @@ class NoteRepository {
     if (Isar.instanceNames.isEmpty) {
       final dir = await getApplicationDocumentsDirectory();
       return await Isar.open(
-        [IsarNoteDocumentSchema, IsarFolderSchema],
+        [IsarNoteDocumentSchema, IsarFolderSchema, IsarTagSchema],
         directory: dir.path,
         inspector: true,
       );
@@ -22,6 +22,11 @@ class NoteRepository {
   }
 
   // Notes
+  Future<IsarNoteDocument?> getNoteById(String id) async {
+    final isar = await db;
+    return await isar.isarNoteDocuments.filter().idEqualTo(id).findFirst();
+  }
+
   Future<List<IsarNoteDocument>> getAllNotes() async {
     final isar = await db;
     return await isar.isarNoteDocuments.where().findAll();
@@ -102,6 +107,11 @@ class NoteRepository {
   }
 
   // Folders
+  Future<IsarFolder?> getFolderById(String id) async {
+    final isar = await db;
+    return await isar.isarFolders.filter().idEqualTo(id).findFirst();
+  }
+
   Future<List<IsarFolder>> getAllFolders() async {
     final isar = await db;
     return await isar.isarFolders.filter().isDeletedEqualTo(false).findAll();
@@ -190,11 +200,60 @@ class NoteRepository {
     await isar.writeTxn(() async {
       final folder = await isar.isarFolders.filter().idEqualTo(folderId).findFirst();
       if (folder != null) {
-        // Prevent moving folder into itself or a potential cycle would need more logic
-        // For now, basic move
         folder.parentFolderId = targetFolderId;
         await isar.isarFolders.put(folder);
       }
+    });
+  }
+
+  Future<void> togglePin(String id, bool isFolder) async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      if (isFolder) {
+        final folder = await isar.isarFolders.filter().idEqualTo(id).findFirst();
+        if (folder != null) {
+          folder.isPinned = !folder.isPinned;
+          await isar.isarFolders.put(folder);
+        }
+      } else {
+        final note = await isar.isarNoteDocuments.filter().idEqualTo(id).findFirst();
+        if (note != null) {
+          note.isPinned = !note.isPinned;
+          await isar.isarNoteDocuments.put(note);
+        }
+      }
+    });
+  }
+
+  Future<void> updateFolderCustomization(String id, {int? colorValue, int? iconCodePoint}) async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      final folder = await isar.isarFolders.filter().idEqualTo(id).findFirst();
+      if (folder != null) {
+        if (colorValue != null) folder.colorValue = colorValue;
+        if (iconCodePoint != null) folder.iconCodePoint = iconCodePoint;
+        await isar.isarFolders.put(folder);
+      }
+    });
+  }
+
+  // Tags
+  Future<List<IsarTag>> getAllTags() async {
+    final isar = await db;
+    return await isar.isarTags.where().findAll();
+  }
+
+  Future<void> saveTag(IsarTag tag) async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      await isar.isarTags.put(tag);
+    });
+  }
+
+  Future<void> deleteTag(String id) async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      await isar.isarTags.filter().idEqualTo(id).deleteAll();
     });
   }
 }
