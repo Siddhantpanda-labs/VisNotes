@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../bloc/auth/auth_bloc.dart';
+import '../bloc/dashboard/dashboard_bloc.dart';
+import '../../data/models/isar_note_model.dart';
 
 class ProfileSettingsPage extends StatefulWidget {
   const ProfileSettingsPage({super.key});
@@ -207,12 +209,28 @@ class _AccountSettings extends StatelessWidget {
             width: 80,
             height: 80,
             decoration: const BoxDecoration(color: Color(0xFFF0F0F0), shape: BoxShape.circle),
-            child: Center(
-              child: Text(
-                (state.user.name ?? '?').substring(0, 1).toUpperCase(),
-                style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.black26),
-              ),
-            ),
+            clipBehavior: Clip.antiAlias,
+            child: state.user.avatarUrl != null && state.user.avatarUrl!.isNotEmpty
+              ? Image.network(
+                  state.user.avatarUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Center(
+                    child: Text(
+                      (state.user.name ?? '?').substring(0, 1).toUpperCase(),
+                      style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.black26),
+                    ),
+                  ),
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                  },
+                )
+              : Center(
+                  child: Text(
+                    (state.user.name ?? '?').substring(0, 1).toUpperCase(),
+                    style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.black26),
+                  ),
+                ),
           ),
           const SizedBox(width: 24),
           Expanded(
@@ -492,16 +510,217 @@ class _SyncSettings extends StatelessWidget {
 class _PrivacySettings extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Privacy', style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 48),
-        _buildSettingSection('Security', [
-          _buildSettingTile(Icons.lock_outline, 'App Lock', 'Disabled'),
-          _buildSettingTile(Icons.visibility_off_outlined, 'Hidden Folders', '0 hidden'),
-        ]),
-      ],
+    return BlocBuilder<DashboardBloc, DashboardState>(
+      builder: (context, state) {
+        if (state is! DashboardLoaded) return const Center(child: CircularProgressIndicator());
+
+        final isPinSet = state.settings.isPinSet;
+        final relockLogic = state.settings.relockLogic;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Privacy', style: GoogleFonts.outfit(fontSize: 32, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text('Control your note security and access permissions.', style: GoogleFonts.outfit(color: Colors.black38)),
+            const SizedBox(height: 48),
+
+            _buildSettingSection('Note Locking', [
+              ListTile(
+                leading: Icon(isPinSet ? Icons.lock_outline : Icons.lock_open_outlined, 
+                    size: 20, color: isPinSet ? Colors.black87 : Colors.black26),
+                title: Text(isPinSet ? 'Update Master PIN' : 'Set Master PIN', 
+                    style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600)),
+                subtitle: Text(isPinSet ? 'Change your current security PIN' : 'Create a PIN to secure individual notes', 
+                    style: GoogleFonts.outfit(fontSize: 12)),
+                trailing: const Icon(Icons.chevron_right, size: 20),
+                onTap: () => _showSetPinDialog(context, isPinSet: isPinSet, currentPinHash: isPinSet ? state.settings.masterPinHash : null),
+              ),
+              if (isPinSet) ...[
+                const Divider(height: 1, indent: 16, endIndent: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Auto-Relock Logic', style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          _ChoiceChip(
+                            label: 'On App Close',
+                            isSelected: relockLogic == 0,
+                            onTap: () => context.read<DashboardBloc>().add(const UpdateLockSettings(relockLogic: 0)),
+                          ),
+                          const SizedBox(width: 8),
+                          _ChoiceChip(
+                            label: 'On Note Close',
+                            isSelected: relockLogic == 1,
+                            onTap: () => context.read<DashboardBloc>().add(const UpdateLockSettings(relockLogic: 1)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
+                ),
+              ],
+            ]),
+
+            if (isPinSet)
+              _buildSettingSection('Danger Zone', [
+                ListTile(
+                  leading: const Icon(Icons.no_encryption_gmailerrorred_outlined, size: 20, color: Colors.redAccent),
+                  title: Text('Reset Master PIN', 
+                      style: GoogleFonts.outfit(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.redAccent)),
+                  subtitle: Text('DELETES ALL LOCKED NOTES for security', 
+                      style: GoogleFonts.outfit(fontSize: 12, color: Colors.redAccent.withOpacity(0.6))),
+                  onTap: () => _showResetConfirmDialog(context),
+                ),
+              ]),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showSetPinDialog(BuildContext context, {required bool isPinSet, String? currentPinHash}) {
+    String currentPinInput = '';
+    String newPinInput = '';
+    bool showError = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text(isPinSet ? 'Change Master PIN' : 'Set Master PIN', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(isPinSet ? 'Enter your current PIN and a new 4-6 digit PIN.' : 'Enter a 4-6 digit numeric PIN.', 
+                      style: GoogleFonts.outfit(fontSize: 14, color: Colors.black54)),
+                  const SizedBox(height: 20),
+                  
+                  if (isPinSet) ...[
+                    TextField(
+                      autofocus: true,
+                      obscureText: true,
+                      keyboardType: TextInputType.number,
+                      maxLength: 6,
+                      decoration: const InputDecoration(
+                        labelText: 'Current PIN',
+                        counterText: '',
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (val) {
+                        currentPinInput = val;
+                        if (showError) setState(() => showError = false);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  TextField(
+                    autofocus: !isPinSet,
+                    obscureText: true,
+                    keyboardType: TextInputType.number,
+                    maxLength: 6,
+                    decoration: const InputDecoration(
+                      labelText: 'New PIN',
+                      counterText: '',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (val) {
+                      newPinInput = val;
+                      if (showError) setState(() => showError = false);
+                    },
+                  ),
+                  
+                  if (showError)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text('Current PIN is incorrect.', style: GoogleFonts.outfit(color: Colors.red, fontSize: 12)),
+                    ),
+                ],
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+                ElevatedButton(
+                  onPressed: () {
+                    if (isPinSet && currentPinInput != currentPinHash) {
+                      setState(() => showError = true);
+                      return;
+                    }
+                    if (newPinInput.length >= 4) {
+                      context.read<DashboardBloc>().add(UpdateLockSettings(newPin: newPinInput));
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('PIN updated successfully')));
+                    }
+                  },
+                  child: const Text('Save PIN'),
+                ),
+              ],
+            );
+          }
+        );
+      },
+    );
+  }
+
+  void _showResetConfirmDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Reset PIN?', style: GoogleFonts.outfit(fontWeight: FontWeight.bold, color: Colors.red)),
+        content: Text(
+          'Resetting your PIN will permanently DELETE all notes that are currently locked. This is an anti-tamper security measure.',
+          style: GoogleFonts.outfit(),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            onPressed: () {
+              context.read<DashboardBloc>().add(ResetPinAndClearLockedNotes());
+              Navigator.pop(ctx);
+            },
+            child: const Text('Delete Notes & Reset PIN'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChoiceChip extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _ChoiceChip({required this.label, required this.isSelected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.black : Colors.black.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.outfit(
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            color: isSelected ? Colors.white : Colors.black54,
+          ),
+        ),
+      ),
     );
   }
 }

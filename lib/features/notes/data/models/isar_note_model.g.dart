@@ -52,34 +52,39 @@ const IsarNoteDocumentSchema = CollectionSchema(
       name: r'isDeleted',
       type: IsarType.bool,
     ),
-    r'isPinned': PropertySchema(
+    r'isLocked': PropertySchema(
       id: 7,
+      name: r'isLocked',
+      type: IsarType.bool,
+    ),
+    r'isPinned': PropertySchema(
+      id: 8,
       name: r'isPinned',
       type: IsarType.bool,
     ),
     r'pages': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'pages',
       type: IsarType.objectList,
       target: r'IsarNotePage',
     ),
     r'parentFolderId': PropertySchema(
-      id: 9,
+      id: 10,
       name: r'parentFolderId',
       type: IsarType.string,
     ),
     r'tags': PropertySchema(
-      id: 10,
+      id: 11,
       name: r'tags',
       type: IsarType.stringList,
     ),
     r'title': PropertySchema(
-      id: 11,
+      id: 12,
       name: r'title',
       type: IsarType.string,
     ),
     r'updatedAt': PropertySchema(
-      id: 12,
+      id: 13,
       name: r'updatedAt',
       type: IsarType.dateTime,
     )
@@ -174,17 +179,18 @@ void _isarNoteDocumentSerialize(
   writer.writeBool(offsets[4], object.excludeFromBackup);
   writer.writeString(offsets[5], object.id);
   writer.writeBool(offsets[6], object.isDeleted);
-  writer.writeBool(offsets[7], object.isPinned);
+  writer.writeBool(offsets[7], object.isLocked);
+  writer.writeBool(offsets[8], object.isPinned);
   writer.writeObjectList<IsarNotePage>(
-    offsets[8],
+    offsets[9],
     allOffsets,
     IsarNotePageSchema.serialize,
     object.pages,
   );
-  writer.writeString(offsets[9], object.parentFolderId);
-  writer.writeStringList(offsets[10], object.tags);
-  writer.writeString(offsets[11], object.title);
-  writer.writeDateTime(offsets[12], object.updatedAt);
+  writer.writeString(offsets[10], object.parentFolderId);
+  writer.writeStringList(offsets[11], object.tags);
+  writer.writeString(offsets[12], object.title);
+  writer.writeDateTime(offsets[13], object.updatedAt);
 }
 
 IsarNoteDocument _isarNoteDocumentDeserialize(
@@ -201,19 +207,20 @@ IsarNoteDocument _isarNoteDocumentDeserialize(
   object.excludeFromBackup = reader.readBool(offsets[4]);
   object.id = reader.readStringOrNull(offsets[5]);
   object.isDeleted = reader.readBool(offsets[6]);
-  object.isPinned = reader.readBool(offsets[7]);
+  object.isLocked = reader.readBool(offsets[7]);
+  object.isPinned = reader.readBool(offsets[8]);
   object.isarId = id;
   object.pages = reader.readObjectList<IsarNotePage>(
-        offsets[8],
+        offsets[9],
         IsarNotePageSchema.deserialize,
         allOffsets,
         IsarNotePage(),
       ) ??
       [];
-  object.parentFolderId = reader.readStringOrNull(offsets[9]);
-  object.tags = reader.readStringList(offsets[10]) ?? [];
-  object.title = reader.readStringOrNull(offsets[11]);
-  object.updatedAt = reader.readDateTimeOrNull(offsets[12]);
+  object.parentFolderId = reader.readStringOrNull(offsets[10]);
+  object.tags = reader.readStringList(offsets[11]) ?? [];
+  object.title = reader.readStringOrNull(offsets[12]);
+  object.updatedAt = reader.readDateTimeOrNull(offsets[13]);
   return object;
 }
 
@@ -241,6 +248,8 @@ P _isarNoteDocumentDeserializeProp<P>(
     case 7:
       return (reader.readBool(offset)) as P;
     case 8:
+      return (reader.readBool(offset)) as P;
+    case 9:
       return (reader.readObjectList<IsarNotePage>(
             offset,
             IsarNotePageSchema.deserialize,
@@ -248,13 +257,13 @@ P _isarNoteDocumentDeserializeProp<P>(
             IsarNotePage(),
           ) ??
           []) as P;
-    case 9:
-      return (reader.readStringOrNull(offset)) as P;
     case 10:
-      return (reader.readStringList(offset) ?? []) as P;
-    case 11:
       return (reader.readStringOrNull(offset)) as P;
+    case 11:
+      return (reader.readStringList(offset) ?? []) as P;
     case 12:
+      return (reader.readStringOrNull(offset)) as P;
+    case 13:
       return (reader.readDateTimeOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -927,6 +936,16 @@ extension IsarNoteDocumentQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'isDeleted',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      isLockedEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isLocked',
         value: value,
       ));
     });
@@ -1808,6 +1827,20 @@ extension IsarNoteDocumentQuerySortBy
   }
 
   QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      sortByIsLocked() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isLocked', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      sortByIsLockedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isLocked', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
       sortByIsPinned() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isPinned', Sort.asc);
@@ -1963,6 +1996,20 @@ extension IsarNoteDocumentQuerySortThenBy
   }
 
   QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      thenByIsLocked() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isLocked', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      thenByIsLockedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isLocked', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
       thenByIsPinned() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isPinned', Sort.asc);
@@ -2084,6 +2131,13 @@ extension IsarNoteDocumentQueryWhereDistinct
   }
 
   QueryBuilder<IsarNoteDocument, IsarNoteDocument, QDistinct>
+      distinctByIsLocked() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isLocked');
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QDistinct>
       distinctByIsPinned() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'isPinned');
@@ -2171,6 +2225,12 @@ extension IsarNoteDocumentQueryProperty
   QueryBuilder<IsarNoteDocument, bool, QQueryOperations> isDeletedProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'isDeleted');
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, bool, QQueryOperations> isLockedProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isLocked');
     });
   }
 

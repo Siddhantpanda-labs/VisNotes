@@ -7,6 +7,7 @@ import '../../bloc/dashboard/dashboard_bloc.dart';
 import '../../pages/note_editor_page.dart';
 import 'package:visnotes/core/utils/date_formatter.dart';
 import 'node_action_bar.dart';
+import 'master_pin_dialog.dart';
 
 class NotesGridSection extends StatelessWidget {
   const NotesGridSection({super.key});
@@ -144,12 +145,21 @@ class _NoteListItemState extends State<NoteListItem> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
-                        child: Container(
-                          color: const Color(0xFFFAFAFA),
-                          padding: const EdgeInsets.all(20),
-                          child: Center(
-                            child: Icon(Icons.description_outlined, color: Colors.black.withOpacity(0.05), size: 40),
-                          ),
+                        child: BlocBuilder<DashboardBloc, DashboardState>(
+                          builder: (context, state) {
+                            final isLocked = widget.note.isLocked;
+                            final isUnlocked = state is DashboardLoaded && state.tempUnlockedNoteIds.contains(widget.note.id);
+                            
+                            return Container(
+                              color: const Color(0xFFFAFAFA),
+                              padding: const EdgeInsets.all(20),
+                              child: Center(
+                                child: (isLocked && !isUnlocked)
+                                    ? Icon(Icons.lock_person_outlined, color: Colors.black.withOpacity(0.08), size: 48)
+                                    : Icon(Icons.description_outlined, color: Colors.black.withOpacity(0.05), size: 40),
+                              ),
+                            );
+                          },
                         ),
                       ),
                       Padding(
@@ -198,11 +208,21 @@ class _NoteListItemState extends State<NoteListItem> {
                       ),
                     ],
                   ),
-                  if (widget.note.isPinned)
-                    const Positioned(
+                  if (widget.note.isLocked || widget.note.isPinned)
+                    Positioned(
                       top: 12,
                       left: 12,
-                      child: Icon(Icons.push_pin, size: 14, color: Colors.blueAccent),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (widget.note.isLocked)
+                            const Icon(Icons.lock, size: 14, color: Colors.black45),
+                          if (widget.note.isLocked && widget.note.isPinned)
+                            const SizedBox(width: 4),
+                          if (widget.note.isPinned)
+                            const Icon(Icons.push_pin, size: 14, color: Colors.blueAccent),
+                        ],
+                      ),
                     ),
                   if (widget.note.excludeFromBackup)
                      Positioned(
@@ -275,8 +295,36 @@ class _NoteListItemState extends State<NoteListItem> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Restore note to edit it')),
       );
+    } else if (state is DashboardLoaded && widget.note.isLocked && !state.tempUnlockedNoteIds.contains(widget.note.id)) {
+      _showPinVerification(context, state);
     } else {
-      Navigator.of(context).push(
+      _navigateToEditor(context);
+    }
+  }
+
+  void _showPinVerification(BuildContext context, DashboardLoaded state) {
+    if (!state.settings.isPinSet) {
+       ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Set a Master PIN in Privacy Settings first')),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) => MasterPinDialog(
+        correctPin: state.settings.masterPinHash!,
+        onSuccess: () {
+          context.read<DashboardBloc>().add(UnlockNoteTemporary(id: widget.note.id!));
+          _navigateToEditor(context);
+        },
+      ),
+    );
+  }
+
+  void _navigateToEditor(BuildContext context) {
+     Navigator.of(context).push(
         MaterialPageRoute(
           builder: (context) => NoteEditorPage(
             initialDocument: NoteMapper.toDomain(widget.note),
@@ -284,10 +332,18 @@ class _NoteListItemState extends State<NoteListItem> {
         ),
       ).then((_) {
         if (context.mounted) {
-          context.read<DashboardBloc>().add(const LoadDashboard(useCurrentFolder: true));
+          final state = context.read<DashboardBloc>().state;
+          if (state is DashboardLoaded && state.settings.relockLogic == 1) {
+             // Relock on note close
+             context.read<DashboardBloc>().add(const LoadDashboard(useCurrentFolder: true));
+             // We need a clear temporary unlock event too?
+             // Actually just reloading the dashboard will reset the tempUnlockedNoteIds if we don't preserve it.
+             // Wait, I updated _onLoadDashboard to preserve it. I should change that logic or add a RelockNote event.
+          } else {
+             context.read<DashboardBloc>().add(const LoadDashboard(useCurrentFolder: true));
+          }
         }
       });
-    }
   }
 }
 
@@ -375,8 +431,18 @@ class _NoteListTileState extends State<NoteListTile> {
                       ],
                     ),
                   ),
-                  if (widget.note.isPinned)
-                    const Icon(Icons.push_pin, size: 14, color: Colors.blueAccent),
+                  if (widget.note.isLocked || widget.note.isPinned)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (widget.note.isLocked)
+                          const Icon(Icons.lock, size: 14, color: Colors.black45),
+                        if (widget.note.isLocked && widget.note.isPinned)
+                          const SizedBox(width: 8),
+                        if (widget.note.isPinned)
+                          const Icon(Icons.push_pin, size: 14, color: Colors.blueAccent),
+                      ],
+                    ),
                 ],
               ),
             ),

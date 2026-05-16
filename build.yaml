@@ -9,3 +9,4 @@ targets:
         generate_for:
           include:
             - lib/features/notes/data/models/isar_note_model.dart
+            - lib/features/notes/data/models/app_settings_model.dart

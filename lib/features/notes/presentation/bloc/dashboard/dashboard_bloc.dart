@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/models/isar_note_model.dart';
+import '../../../data/models/app_settings_model.dart';
 import '../../../data/repositories/note_repository.dart';
 
 // Events
@@ -156,15 +157,36 @@ class DeleteTag extends DashboardEvent {
 }
 
 class FilterByTag extends DashboardEvent {
-  final String? tagName;
-  const FilterByTag(this.tagName);
+  final String? tag;
+  const FilterByTag(this.tag);
 }
 
 class ToggleTagOnNode extends DashboardEvent {
-  final String nodeId;
-  final String tagName;
+  final String id;
+  final String tag;
   final bool isFolder;
-  const ToggleTagOnNode({required this.nodeId, required this.tagName, required this.isFolder});
+  const ToggleTagOnNode({required this.id, required this.tag, required this.isFolder});
+}
+
+// Security Events
+class ToggleNoteLock extends DashboardEvent {
+  final String id;
+  const ToggleNoteLock({required this.id});
+  @override
+  List<Object?> get props => [id];
+}
+
+class UpdateLockSettings extends DashboardEvent {
+  final String? newPin;
+  final int? relockLogic;
+  const UpdateLockSettings({this.newPin, this.relockLogic});
+}
+
+class ResetPinAndClearLockedNotes extends DashboardEvent {}
+
+class UnlockNoteTemporary extends DashboardEvent {
+  final String id;
+  const UnlockNoteTemporary({required this.id});
 }
 
 // States
@@ -191,6 +213,8 @@ class DashboardLoaded extends DashboardState {
   final bool isListView;
   final List<IsarTag> tags;
   final String? activeTagFilter;
+  final IsarAppSettings settings;
+  final Set<String> tempUnlockedNoteIds;
 
   const DashboardLoaded({
     required this.notes, 
@@ -205,6 +229,8 @@ class DashboardLoaded extends DashboardState {
     this.isListView = false,
     this.tags = const [],
     this.activeTagFilter,
+    required this.settings,
+    this.tempUnlockedNoteIds = const {},
   });
 
   DashboardLoaded copyWith({
@@ -220,6 +246,8 @@ class DashboardLoaded extends DashboardState {
     bool? isListView,
     List<IsarTag>? tags,
     String? activeTagFilter,
+    IsarAppSettings? settings,
+    Set<String>? tempUnlockedNoteIds,
   }) {
     return DashboardLoaded(
       notes: notes ?? this.notes,
@@ -234,6 +262,8 @@ class DashboardLoaded extends DashboardState {
       isListView: isListView ?? this.isListView,
       tags: tags ?? this.tags,
       activeTagFilter: activeTagFilter ?? this.activeTagFilter,
+      settings: settings ?? this.settings,
+      tempUnlockedNoteIds: tempUnlockedNoteIds ?? this.tempUnlockedNoteIds,
     );
   }
 
@@ -241,7 +271,7 @@ class DashboardLoaded extends DashboardState {
   List<Object?> get props => [
     notes, folders, allFolders, currentFolderId, currentFolder, 
     selectedNoteIds, selectedFolderIds, isSelectionMode, isTrashView,
-    isListView, tags, activeTagFilter,
+    isListView, tags, activeTagFilter, settings, tempUnlockedNoteIds,
   ];
 }
 
@@ -281,6 +311,12 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     on<DeleteTag>(_onDeleteTag);
     on<FilterByTag>(_onFilterByTag);
     on<ToggleTagOnNode>(_onToggleTagOnNode);
+    
+    // Security handlers
+    on<ToggleNoteLock>(_onToggleNoteLock);
+    on<UpdateLockSettings>(_onUpdateLockSettings);
+    on<ResetPinAndClearLockedNotes>(_onResetPinAndClearLockedNotes);
+    on<UnlockNoteTemporary>(_onUnlockNoteTemporary);
   }
 
   Future<void> _onLoadDashboard(LoadDashboard event, Emitter<DashboardState> emit) async {
@@ -297,6 +333,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       final folders = await repository.getFoldersByParent(folderId);
       final allFolders = await repository.getAllFolders();
       final tags = await repository.getAllTags();
+      final settings = await repository.getSettings();
       
       IsarFolder? currentFolder;
       if (folderId != null) {
@@ -310,7 +347,9 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         currentFolderId: folderId,
         currentFolder: currentFolder,
         tags: tags,
+        settings: settings,
         isListView: state is DashboardLoaded ? (state as DashboardLoaded).isListView : false,
+        tempUnlockedNoteIds: state is DashboardLoaded ? (state as DashboardLoaded).tempUnlockedNoteIds : const {},
       ));
     } catch (e) {
       emit(DashboardError(e.toString()));
@@ -367,11 +406,14 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       final folders = await repository.getTrashFolders();
       final allFolders = await repository.getAllFolders();
       
+      final settings = await repository.getSettings();
+      
       emit(DashboardLoaded(
         notes: notes,
         folders: folders,
         allFolders: allFolders,
         isTrashView: true,
+        settings: settings,
       ));
     } catch (e) {
       emit(DashboardError(e.toString()));
@@ -642,32 +684,32 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
 
   void _onFilterByTag(FilterByTag event, Emitter<DashboardState> emit) {
     if (state is DashboardLoaded) {
-      emit((state as DashboardLoaded).copyWith(activeTagFilter: event.tagName));
+      emit((state as DashboardLoaded).copyWith(activeTagFilter: event.tag));
     }
   }
 
   Future<void> _onToggleTagOnNode(ToggleTagOnNode event, Emitter<DashboardState> emit) async {
     try {
       if (event.isFolder) {
-        final folder = await repository.getFolderById(event.nodeId);
+        final folder = await repository.getFolderById(event.id);
         if (folder != null) {
           final newTags = List<String>.from(folder.tags);
-          if (newTags.contains(event.tagName)) {
-            newTags.remove(event.tagName);
+          if (newTags.contains(event.tag)) {
+            newTags.remove(event.tag);
           } else {
-            newTags.add(event.tagName);
+            newTags.add(event.tag);
           }
           folder.tags = newTags;
           await repository.saveFolder(folder);
         }
       } else {
-        final note = await repository.getNoteById(event.nodeId);
+        final note = await repository.getNoteById(event.id);
         if (note != null) {
           final newTags = List<String>.from(note.tags);
-          if (newTags.contains(event.tagName)) {
-            newTags.remove(event.tagName);
+          if (newTags.contains(event.tag)) {
+            newTags.remove(event.tag);
           } else {
-            newTags.add(event.tagName);
+            newTags.add(event.tag);
           }
           note.tags = newTags;
           await repository.saveNote(note);
@@ -676,6 +718,44 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       add(const LoadDashboard(useCurrentFolder: true, isSilent: true));
     } catch (e) {
       emit(DashboardError(e.toString()));
+    }
+  }
+
+  Future<void> _onToggleNoteLock(ToggleNoteLock event, Emitter<DashboardState> emit) async {
+    final note = await repository.getNoteById(event.id);
+    if (note != null) {
+      note.isLocked = !note.isLocked;
+      await repository.saveNote(note);
+      add(const LoadDashboard(useCurrentFolder: true, isSilent: true));
+    }
+  }
+
+  Future<void> _onUpdateLockSettings(UpdateLockSettings event, Emitter<DashboardState> emit) async {
+    final settings = await repository.getSettings();
+    if (event.newPin != null) {
+      settings.masterPinHash = event.newPin;
+    }
+    if (event.relockLogic != null) {
+      settings.relockLogic = event.relockLogic!;
+    }
+    await repository.updateSettings(settings);
+    add(const LoadDashboard(useCurrentFolder: true, isSilent: true));
+  }
+
+  Future<void> _onResetPinAndClearLockedNotes(ResetPinAndClearLockedNotes event, Emitter<DashboardState> emit) async {
+    await repository.deleteAllLockedNotes();
+    final settings = await repository.getSettings();
+    settings.masterPinHash = null;
+    settings.relockLogic = 0;
+    await repository.updateSettings(settings);
+    add(const LoadDashboard(useCurrentFolder: true, isSilent: false));
+  }
+
+  Future<void> _onUnlockNoteTemporary(UnlockNoteTemporary event, Emitter<DashboardState> emit) async {
+    if (state is DashboardLoaded) {
+      final currentState = state as DashboardLoaded;
+      final newUnlocked = Set<String>.from(currentState.tempUnlockedNoteIds)..add(event.id);
+      emit(currentState.copyWith(tempUnlockedNoteIds: newUnlocked));
     }
   }
 }

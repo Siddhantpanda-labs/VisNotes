@@ -21,6 +21,7 @@ class IsarNoteDocument {
   String? parentFolderId;
   bool isDeleted = false;
   bool excludeFromBackup = false;
+  bool isLocked = false;
   DateTime? deletedAt;
   
   List<String> tags = [];

@@ -43,8 +43,23 @@ class ProfileButton extends StatelessWidget {
               ),
               child: Center(
                 child: state is Authenticated
-                    ? (state.user.avatarUrl != null
-                        ? ClipOval(child: Image.network(state.user.avatarUrl!, fit: BoxFit.cover))
+                    ? (state.user.avatarUrl != null && state.user.avatarUrl!.isNotEmpty
+                        ? ClipOval(
+                            child: Image.network(
+                              state.user.avatarUrl!,
+                              fit: BoxFit.cover,
+                              width: 36,
+                              height: 36,
+                              errorBuilder: (context, error, stackTrace) => Text(
+                                initials,
+                                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87),
+                              ),
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return const Center(child: SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 1.5)));
+                              },
+                            ),
+                          )
                         : Text(initials, style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87)))
                     : const Icon(Icons.person_outline, size: 20, color: Colors.black38),
               ),

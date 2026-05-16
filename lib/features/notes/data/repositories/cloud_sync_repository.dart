@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import 'package:googleapis_auth/auth_io.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import '../models/isar_note_model.dart';
 import 'note_repository.dart';
@@ -38,10 +39,9 @@ class CloudSyncRepository {
     'https://www.googleapis.com/auth/userinfo.profile',
   ];
 
-  // IMPORTANT: Move these to environment config / secrets manager before production.
   final ClientId _clientId = ClientId(
-    'YOUR_CLIENT_ID_HERE',
-    'YOUR_CLIENT_SECRET_HERE',
+    dotenv.env['GOOGLE_CLIENT_ID'] ?? '',
+    dotenv.env['GOOGLE_CLIENT_SECRET'] ?? '',
   );
 
   AuthClient? _authClient;

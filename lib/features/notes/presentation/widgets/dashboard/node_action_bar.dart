@@ -87,6 +87,17 @@ class _NodeActionBarState extends State<NodeActionBar> {
                                 widget.onClose();
                               },
                             ),
+                          if (!widget.isFolder)
+                            _MenuOption(
+                              icon: Icons.lock_outline,
+                              label: (state is DashboardLoaded && state.notes.any((n) => n.id == widget.id && n.isLocked)) 
+                                  ? 'Unlock Note' : 'Lock Note',
+                              onTap: () {
+                                context.read<DashboardBloc>().add(ToggleNoteLock(id: widget.id));
+                                _hideMoreMenu();
+                                widget.onClose();
+                              },
+                            ),
                           _MenuOption(
                             icon: Icons.file_download_outlined,
                             label: 'Export Note',
@@ -338,8 +349,8 @@ class _NodeActionBarState extends State<NodeActionBar> {
                         activeColor: Color(tag.colorValue),
                         onChanged: (val) {
                           context.read<DashboardBloc>().add(ToggleTagOnNode(
-                            nodeId: widget.id, 
-                            tagName: tag.name!, 
+                            id: widget.id, 
+                            tag: tag.name!, 
                             isFolder: widget.isFolder
                           ));
                         },

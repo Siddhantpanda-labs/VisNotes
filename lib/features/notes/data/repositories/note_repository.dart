@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/isar_note_model.dart';
+import '../models/app_settings_model.dart';
 
 class NoteRepository {
   late Future<Isar> db;
@@ -16,7 +17,13 @@ class NoteRepository {
     if (Isar.instanceNames.isEmpty) {
       final dir = await getApplicationDocumentsDirectory();
       return await Isar.open(
-        [IsarNoteDocumentSchema, IsarFolderSchema, IsarTagSchema, IsarUserSettingsSchema],
+        [
+          IsarNoteDocumentSchema, 
+          IsarFolderSchema, 
+          IsarTagSchema, 
+          IsarUserSettingsSchema,
+          IsarAppSettingsSchema,
+        ],
         directory: dir.path,
         inspector: true,
       );
@@ -262,5 +269,33 @@ class NoteRepository {
     await isar.writeTxn(() async {
       await isar.isarTags.filter().idEqualTo(id).deleteAll();
     });
+  }
+
+  // Settings & Security
+  Future<IsarAppSettings> getSettings() async {
+    final isar = await db;
+    final settings = await isar.isarAppSettings.get(0);
+    return settings ?? IsarAppSettings();
+  }
+
+  Future<void> updateSettings(IsarAppSettings settings) async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      await isar.isarAppSettings.put(settings);
+    });
+    _changeController.add(null);
+  }
+
+  Future<void> deleteAllLockedNotes() async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      final lockedNotes = await isar.isarNoteDocuments.filter()
+          .isLockedEqualTo(true)
+          .findAll();
+      
+      final idsToDelete = lockedNotes.map((n) => n.isarId).toList();
+      await isar.isarNoteDocuments.deleteAll(idsToDelete);
+    });
+    _changeController.add(null);
   }
 }
