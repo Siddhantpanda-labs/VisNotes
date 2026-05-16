@@ -138,11 +138,7 @@ class _EditableNotePageState extends State<EditableNotePage>
             try { _textController.selection = selection; } catch (_) {}
             _isProgrammaticUpdate = false;
           }
-          if (!_focusNode.hasFocus && _textController.text.isNotEmpty) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) _focusNode.requestFocus();
-            });
-          }
+
         }
 
         // ── Compute caret / selection rects ───────────────────────────────────

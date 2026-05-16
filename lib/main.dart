@@ -39,7 +39,10 @@ class VisNotesApp extends StatelessWidget {
       child: MultiBlocProvider(
         providers: [
           BlocProvider(
-            create: (context) => DashboardBloc(repository: repository)..add(LoadDashboard()),
+            create: (context) => DashboardBloc(
+              repository: repository,
+              cloudSyncRepository: cloudSyncRepository,
+            )..add(LoadDashboard()),
           ),
           BlocProvider(
             create: (context) => AuthBloc(repository, cloudSyncRepository)..add(AuthAppStarted()),

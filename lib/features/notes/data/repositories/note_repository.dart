@@ -271,6 +271,22 @@ class NoteRepository {
     });
   }
 
+  // User Settings
+  Future<IsarUserSettings?> getUserSettings() async {
+    final isar = await db;
+    return await isar.isarUserSettings.where().findFirst();
+  }
+
+  Future<void> saveUserSettings(IsarUserSettings settings) async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      await isar.isarUserSettings.put(settings);
+    });
+    // Note: intentionally NOT emitting _changeController here.
+    // User settings are internal metadata, not user content.
+    // Emitting would trigger spurious auto-syncs and dashboard reloads.
+  }
+
   // Settings & Security
   Future<IsarAppSettings> getSettings() async {
     final isar = await db;
@@ -297,5 +313,134 @@ class NoteRepository {
       await isar.isarNoteDocuments.deleteAll(idsToDelete);
     });
     _changeController.add(null);
+  }
+
+  Future<void> updateItemSharedStatus(String id, bool isFolder, {required bool isShared, String? driveFileId}) async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      if (isFolder) {
+        final folder = await isar.isarFolders.filter().idEqualTo(id).findFirst();
+        if (folder != null) {
+          folder.isShared = isShared;
+          if (driveFileId != null) folder.driveFileId = driveFileId;
+          await isar.isarFolders.put(folder);
+        }
+      } else {
+        final note = await isar.isarNoteDocuments.filter().idEqualTo(id).findFirst();
+        if (note != null) {
+          note.isShared = isShared;
+          if (driveFileId != null) note.driveFileId = driveFileId;
+          await isar.isarNoteDocuments.put(note);
+        }
+      }
+    });
+    _changeController.add(null);
+  }
+
+  /// Clears all account-specific data (backup-enabled notes and all folders) 
+  /// while preserving local-only (backup-excluded) notes.
+  Future<void> clearAccountData() async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      // 1. Delete all backup-enabled notes
+      await isar.isarNoteDocuments.filter()
+          .excludeFromBackupEqualTo(false)
+          .deleteAll();
+      
+      // 2. Delete all folders (folders are account-bound by design in VisNotes)
+      await isar.isarFolders.where().deleteAll();
+      
+      // 3. Clear any folder associations for the remaining local-only notes
+      final localNotes = await isar.isarNoteDocuments.where().findAll();
+      for (final note in localNotes) {
+        note.parentFolderId = null;
+        await isar.isarNoteDocuments.put(note);
+      }
+    });
+    _changeController.add(null);
+  }
+
+  // ─── Collaboration ────────────────────────────────────────────────────────
+
+  /// Updates the collaborator + admin lists for a note and emits a change.
+  Future<void> updateNoteCollaborators(
+    String noteId,
+    List<String> collaborators,
+    List<String> adminEmails,
+  ) async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      final note = await isar.isarNoteDocuments.filter().idEqualTo(noteId).findFirst();
+      if (note != null) {
+        note.collaborators = List<String>.from(collaborators);
+        note.adminEmails   = List<String>.from(adminEmails);
+        note.isShared = collaborators.isNotEmpty;
+        await isar.isarNoteDocuments.put(note);
+      }
+    });
+    _changeController.add(null);
+  }
+
+  /// Updates the collaborator + admin lists for a folder and emits a change.
+  Future<void> updateFolderCollaborators(
+    String folderId,
+    List<String> collaborators,
+    List<String> adminEmails,
+  ) async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      final folder = await isar.isarFolders.filter().idEqualTo(folderId).findFirst();
+      if (folder != null) {
+        folder.collaborators = List<String>.from(collaborators);
+        folder.adminEmails   = List<String>.from(adminEmails);
+        folder.isShared = collaborators.isNotEmpty;
+        await isar.isarFolders.put(folder);
+      }
+    });
+    _changeController.add(null);
+  }
+
+  /// Permanently deletes a note and emits a change event.
+  Future<void> permanentlyDeleteNote(String noteId) async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      await isar.isarNoteDocuments.filter().idEqualTo(noteId).deleteAll();
+    });
+    _changeController.add(null);
+  }
+
+  /// Permanently deletes a folder and ALL its child notes, then emits a change.
+  Future<void> permanentlyDeleteFolder(String folderId) async {
+    final isar = await db;
+    await isar.writeTxn(() async {
+      // Delete all notes that belong to this folder
+      await isar.isarNoteDocuments
+          .filter()
+          .parentFolderIdEqualTo(folderId)
+          .deleteAll();
+      // Delete the folder itself
+      await isar.isarFolders.filter().idEqualTo(folderId).deleteAll();
+    });
+    _changeController.add(null);
+  }
+
+  /// Returns all notes that are marked as shared (received from others).
+  Future<List<IsarNoteDocument>> getSharedNotes() async {
+    final isar = await db;
+    return await isar.isarNoteDocuments
+        .filter()
+        .isSharedEqualTo(true)
+        .isDeletedEqualTo(false)
+        .findAll();
+  }
+
+  /// Returns all folders that are marked as shared (received from others).
+  Future<List<IsarFolder>> getSharedFolders() async {
+    final isar = await db;
+    return await isar.isarFolders
+        .filter()
+        .isSharedEqualTo(true)
+        .isDeletedEqualTo(false)
+        .findAll();
   }
 }

@@ -69,6 +69,12 @@ class NoteDto {
   final DateTime? deletedAt;
   final List<String> tags;
   final List<NotePageDto> pages;
+  final String? ownerEmail;
+  final String? lastEditedBy;
+  final String? driveFileId;
+  final bool isShared;
+  final List<String> collaborators;
+  final List<String> adminEmails;
 
   const NoteDto({
     required this.id,
@@ -84,6 +90,12 @@ class NoteDto {
     this.deletedAt,
     this.tags = const [],
     this.pages = const [],
+    this.ownerEmail,
+    this.lastEditedBy,
+    this.driveFileId,
+    this.isShared = false,
+    this.collaborators = const [],
+    this.adminEmails = const [],
   });
 
   Map<String, dynamic> toJson() => {
@@ -100,6 +112,12 @@ class NoteDto {
         'deletedAt': deletedAt?.toIso8601String(),
         'tags': tags,
         'pages': pages.map((p) => p.toJson()).toList(),
+        'ownerEmail': ownerEmail,
+        'lastEditedBy': lastEditedBy,
+        'driveFileId': driveFileId,
+        'isShared': isShared,
+        'collaborators': collaborators,
+        'adminEmails': adminEmails,
       };
 
   factory NoteDto.fromJson(Map<String, dynamic> json) => NoteDto(
@@ -118,6 +136,12 @@ class NoteDto {
         pages: (json['pages'] as List? ?? [])
             .map((e) => NotePageDto.fromJson(e as Map<String, dynamic>))
             .toList(),
+        ownerEmail: json['ownerEmail'] as String?,
+        lastEditedBy: json['lastEditedBy'] as String?,
+        driveFileId: json['driveFileId'] as String?,
+        isShared: json['isShared'] as bool? ?? false,
+        collaborators: List<String>.from(json['collaborators'] as List? ?? []),
+        adminEmails: List<String>.from(json['adminEmails'] as List? ?? []),
       );
 }
 
@@ -325,6 +349,11 @@ class FolderDto {
   final List<String> tags;
   final List<String> noteIds;
   final List<String> childFolderIds;
+  final String? ownerEmail;
+  final String? driveFileId;
+  final bool isShared;
+  final List<String> collaborators;
+  final List<String> adminEmails;
 
   const FolderDto({
     required this.id,
@@ -340,6 +369,11 @@ class FolderDto {
     this.tags = const [],
     this.noteIds = const [],
     this.childFolderIds = const [],
+    this.ownerEmail,
+    this.driveFileId,
+    this.isShared = false,
+    this.collaborators = const [],
+    this.adminEmails = const [],
   });
 
   Map<String, dynamic> toJson() => {
@@ -356,6 +390,11 @@ class FolderDto {
         'tags': tags,
         'noteIds': noteIds,
         'childFolderIds': childFolderIds,
+        'ownerEmail': ownerEmail,
+        'driveFileId': driveFileId,
+        'isShared': isShared,
+        'collaborators': collaborators,
+        'adminEmails': adminEmails,
       };
 
   factory FolderDto.fromJson(Map<String, dynamic> json) => FolderDto(
@@ -373,6 +412,11 @@ class FolderDto {
         noteIds: List<String>.from(json['noteIds'] as List? ?? []),
         childFolderIds:
             List<String>.from(json['childFolderIds'] as List? ?? []),
+        ownerEmail: json['ownerEmail'] as String?,
+        driveFileId: json['driveFileId'] as String?,
+        isShared: json['isShared'] as bool? ?? false,
+        collaborators: List<String>.from(json['collaborators'] as List? ?? []),
+        adminEmails: List<String>.from(json['adminEmails'] as List? ?? []),
       );
 }
 

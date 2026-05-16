@@ -90,7 +90,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     // Auto-sync: debounce 5 s after last data change
     _syncSubscription = repository.onDataChanged
-        .debounceTime(const Duration(seconds: 5))
+        .debounceTime(const Duration(minutes: 1))
         .listen((_) {
           if (state is Authenticated &&
               (state as Authenticated).user.isCloudSyncEnabled) {
@@ -126,6 +126,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           }
         }
         emit(Authenticated(settings));
+        // Also fetch shared items on startup
+        await cloudSyncRepository.fetchSharedItems();
       } else {
         emit(Unauthenticated());
       }
@@ -164,26 +166,39 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     try {
       final cloudUser = await cloudSyncRepository.signIn();
       if (cloudUser != null) {
+        // Step 1: Save user settings in a transaction (fast, sync-safe)
         final isar = await repository.db;
+        IsarUserSettings settings = IsarUserSettings();
         await isar.writeTxn(() async {
-          var settings = await isar.isarUserSettings.where().findFirst();
-          if (settings == null) {
-            settings = IsarUserSettings();
-          }
-          
+          settings = await isar.isarUserSettings.where().findFirst() ?? IsarUserSettings();
           settings.email      = cloudUser.email;
           settings.name       = cloudUser.name;
           settings.avatarUrl  = cloudUser.photoUrl;
           settings.isLoggedIn = true;
-          
-          // Save tokens for session restoration
           settings.googleAccessToken  = cloudUser.credentials.accessToken.data;
           settings.googleRefreshToken = cloudUser.credentials.refreshToken;
-          settings.googleTokenExpiry   = cloudUser.credentials.accessToken.expiry;
-          
+          settings.googleTokenExpiry  = cloudUser.credentials.accessToken.expiry;
           await isar.isarUserSettings.put(settings);
-          emit(Authenticated(settings));
         });
+
+        // Step 2: Show the user as logged in immediately
+        emit(Authenticated(settings));
+
+        // Step 3: Restore account backup (outside transaction — this writes to Isar internally)
+        print('[AuthBloc] Restoring account data from Drive...');
+        await cloudSyncRepository.restoreFromDrive();
+
+        // Step 3.5: Clean up any shared notes whose access was revoked
+        print('[AuthBloc] Cleaning up revoked shared items...');
+        await cloudSyncRepository.cleanupRevokedSharedItems();
+
+        // Step 4: Fetch shared items (outside transaction)
+        print('[AuthBloc] Fetching shared items...');
+        await cloudSyncRepository.fetchSharedItems();
+
+        // Step 5: Re-fetch final user state and emit
+        final finalUser = await repository.getUserSettings();
+        if (finalUser != null) emit(Authenticated(finalUser));
       } else {
         emit(Unauthenticated());
       }
@@ -193,8 +208,23 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   Future<void> _onLogoutRequested(LogoutRequested event, Emitter<AuthState> emit) async {
+    if (state is Authenticated) {
+      final user = (state as Authenticated).user;
+      // 1. Perform final sync if cloud sync is enabled
+      if (user.isCloudSyncEnabled) {
+        print('[AuthBloc] Performing final sync before logout...');
+        await cloudSyncRepository.syncToDrive(user.email);
+      }
+    }
+
     try {
+      // 2. Clear account data from local DB (keep only backup-excluded notes)
+      await repository.clearAccountData();
+      
+      // 3. Sign out from Google
       await cloudSyncRepository.signOut();
+
+      // 4. Update user settings in DB
       final isar = await repository.db;
       await isar.writeTxn(() async {
         final settings = await isar.isarUserSettings.where().findFirst();
@@ -241,16 +271,24 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthSyncing(user));
     try {
       final result = await cloudSyncRepository.syncToDrive(user.email);
+      
+      // IMPORTANT: After sync, we MUST fetch the latest user settings from DB 
+      // because CloudSyncRepository might have refreshed tokens in the background.
+      // If we use the old 'user' object, we will overwrite the new tokens with old ones.
+      final latestUser = await repository.getUserSettings();
+      if (latestUser == null) return;
+
       if (result.success) {
         final isar = await repository.db;
         await isar.writeTxn(() async {
-          user.lastSyncTime = DateTime.now();
-          await isar.isarUserSettings.put(user);
+          latestUser.lastSyncTime = DateTime.now();
+          await isar.isarUserSettings.put(latestUser);
         });
+        emit(Authenticated(latestUser));
       } else {
         print('[AuthBloc] Sync error: ${result.message}');
+        emit(Authenticated(latestUser));
       }
-      emit(Authenticated(user));
     } catch (e) {
       print('[AuthBloc] Sync failed: $e');
       emit(Authenticated(user));
@@ -263,14 +301,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthRestoring());
     try {
       final restored = await cloudSyncRepository.restoreFromDrive();
+      
+      final latestUser = await repository.getUserSettings();
+      if (latestUser == null) return;
+
       if (restored) {
         final isar = await repository.db;
         await isar.writeTxn(() async {
-          user.lastSyncTime = DateTime.now();
-          await isar.isarUserSettings.put(user);
+          latestUser.lastSyncTime = DateTime.now();
+          await isar.isarUserSettings.put(latestUser);
         });
       }
-      emit(Authenticated(user));
+      emit(Authenticated(latestUser));
     } catch (e) {
       print('[AuthBloc] Restore failed: $e');
       emit(Authenticated(user));

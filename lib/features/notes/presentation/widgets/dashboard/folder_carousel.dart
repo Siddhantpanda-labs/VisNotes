@@ -125,11 +125,21 @@ class _FolderItemState extends State<FolderItem> {
                   ],
                 ),
               ),
-              if (widget.folder.isPinned)
-                const Positioned(
+              if (widget.folder.isPinned || widget.folder.isShared)
+                Positioned(
                   top: 12,
                   left: 12,
-                  child: Icon(Icons.push_pin, size: 14, color: Colors.blueAccent),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (widget.folder.isPinned)
+                        const Icon(Icons.push_pin, size: 14, color: Colors.blueAccent),
+                      if (widget.folder.isPinned && widget.folder.isShared)
+                        const SizedBox(width: 4),
+                      if (widget.folder.isShared)
+                        const Icon(Icons.group, size: 14, color: Colors.green),
+                    ],
+                  ),
                 ),
               if (isSelectionMode)
                 Positioned(

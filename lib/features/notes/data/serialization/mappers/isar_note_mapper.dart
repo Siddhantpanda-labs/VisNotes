@@ -27,6 +27,12 @@ class IsarNoteMapper {
         deletedAt: note.deletedAt,
         tags: List<String>.from(note.tags),
         pages: note.pages.map(_pageToDto).toList(),
+        ownerEmail: note.ownerEmail,
+        lastEditedBy: note.lastEditedBy,
+        driveFileId: note.driveFileId,
+        isShared: note.isShared,
+        collaborators: List<String>.from(note.collaborators),
+        adminEmails: List<String>.from(note.adminEmails),
       );
 
   static IsarNoteDocument fromDto(NoteDto dto) => IsarNoteDocument()
@@ -42,7 +48,13 @@ class IsarNoteMapper {
     ..excludeFromBackup = dto.excludeFromBackup
     ..deletedAt = dto.deletedAt
     ..tags = List<String>.from(dto.tags)
-    ..pages = dto.pages.map(_pageFromDto).cast<IsarNotePage>().toList();
+    ..pages = dto.pages.map(_pageFromDto).cast<IsarNotePage>().toList()
+    ..ownerEmail = dto.ownerEmail
+    ..lastEditedBy = dto.lastEditedBy
+    ..driveFileId = dto.driveFileId
+    ..isShared = dto.isShared
+    ..collaborators = List<String>.from(dto.collaborators)
+    ..adminEmails = List<String>.from(dto.adminEmails);
 
   // Page
   static NotePageDto _pageToDto(IsarNotePage page) => NotePageDto(
@@ -155,6 +167,11 @@ class IsarFolderMapper {
         tags: List<String>.from(folder.tags),
         noteIds: List<String>.from(folder.noteIds),
         childFolderIds: List<String>.from(folder.childFolderIds),
+        ownerEmail: folder.ownerEmail,
+        driveFileId: folder.driveFileId,
+        isShared: folder.isShared,
+        collaborators: List<String>.from(folder.collaborators),
+        adminEmails: List<String>.from(folder.adminEmails),
       );
 
   static IsarFolder fromDto(FolderDto dto) => IsarFolder()
@@ -170,7 +187,12 @@ class IsarFolderMapper {
     ..iconCodePoint = dto.iconCodePoint
     ..tags = List<String>.from(dto.tags)
     ..noteIds = List<String>.from(dto.noteIds)
-    ..childFolderIds = List<String>.from(dto.childFolderIds);
+    ..childFolderIds = List<String>.from(dto.childFolderIds)
+    ..ownerEmail = dto.ownerEmail
+    ..driveFileId = dto.driveFileId
+    ..isShared = dto.isShared
+    ..collaborators = List<String>.from(dto.collaborators)
+    ..adminEmails = List<String>.from(dto.adminEmails);
 }
 
 // ─── Tag ───────────────────────────────────────────────────────────────────

@@ -17,74 +17,104 @@ const IsarNoteDocumentSchema = CollectionSchema(
   name: r'IsarNoteDocument',
   id: -3330625021260316957,
   properties: {
-    r'createdAt': PropertySchema(
+    r'adminEmails': PropertySchema(
       id: 0,
+      name: r'adminEmails',
+      type: IsarType.stringList,
+    ),
+    r'collaborators': PropertySchema(
+      id: 1,
+      name: r'collaborators',
+      type: IsarType.stringList,
+    ),
+    r'createdAt': PropertySchema(
+      id: 2,
       name: r'createdAt',
       type: IsarType.dateTime,
     ),
     r'dashboardX': PropertySchema(
-      id: 1,
+      id: 3,
       name: r'dashboardX',
       type: IsarType.double,
     ),
     r'dashboardY': PropertySchema(
-      id: 2,
+      id: 4,
       name: r'dashboardY',
       type: IsarType.double,
     ),
     r'deletedAt': PropertySchema(
-      id: 3,
+      id: 5,
       name: r'deletedAt',
       type: IsarType.dateTime,
     ),
+    r'driveFileId': PropertySchema(
+      id: 6,
+      name: r'driveFileId',
+      type: IsarType.string,
+    ),
     r'excludeFromBackup': PropertySchema(
-      id: 4,
+      id: 7,
       name: r'excludeFromBackup',
       type: IsarType.bool,
     ),
     r'id': PropertySchema(
-      id: 5,
+      id: 8,
       name: r'id',
       type: IsarType.string,
     ),
     r'isDeleted': PropertySchema(
-      id: 6,
+      id: 9,
       name: r'isDeleted',
       type: IsarType.bool,
     ),
     r'isLocked': PropertySchema(
-      id: 7,
+      id: 10,
       name: r'isLocked',
       type: IsarType.bool,
     ),
     r'isPinned': PropertySchema(
-      id: 8,
+      id: 11,
       name: r'isPinned',
       type: IsarType.bool,
     ),
+    r'isShared': PropertySchema(
+      id: 12,
+      name: r'isShared',
+      type: IsarType.bool,
+    ),
+    r'lastEditedBy': PropertySchema(
+      id: 13,
+      name: r'lastEditedBy',
+      type: IsarType.string,
+    ),
+    r'ownerEmail': PropertySchema(
+      id: 14,
+      name: r'ownerEmail',
+      type: IsarType.string,
+    ),
     r'pages': PropertySchema(
-      id: 9,
+      id: 15,
       name: r'pages',
       type: IsarType.objectList,
       target: r'IsarNotePage',
     ),
     r'parentFolderId': PropertySchema(
-      id: 10,
+      id: 16,
       name: r'parentFolderId',
       type: IsarType.string,
     ),
     r'tags': PropertySchema(
-      id: 11,
+      id: 17,
       name: r'tags',
       type: IsarType.stringList,
     ),
     r'title': PropertySchema(
-      id: 12,
+      id: 18,
       name: r'title',
       type: IsarType.string,
     ),
     r'updatedAt': PropertySchema(
-      id: 13,
+      id: 19,
       name: r'updatedAt',
       type: IsarType.dateTime,
     )
@@ -130,8 +160,40 @@ int _isarNoteDocumentEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
+  bytesCount += 3 + object.adminEmails.length * 3;
+  {
+    for (var i = 0; i < object.adminEmails.length; i++) {
+      final value = object.adminEmails[i];
+      bytesCount += value.length * 3;
+    }
+  }
+  bytesCount += 3 + object.collaborators.length * 3;
+  {
+    for (var i = 0; i < object.collaborators.length; i++) {
+      final value = object.collaborators[i];
+      bytesCount += value.length * 3;
+    }
+  }
+  {
+    final value = object.driveFileId;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   {
     final value = object.id;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
+    final value = object.lastEditedBy;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
+    final value = object.ownerEmail;
     if (value != null) {
       bytesCount += 3 + value.length * 3;
     }
@@ -172,25 +234,31 @@ void _isarNoteDocumentSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeDateTime(offsets[0], object.createdAt);
-  writer.writeDouble(offsets[1], object.dashboardX);
-  writer.writeDouble(offsets[2], object.dashboardY);
-  writer.writeDateTime(offsets[3], object.deletedAt);
-  writer.writeBool(offsets[4], object.excludeFromBackup);
-  writer.writeString(offsets[5], object.id);
-  writer.writeBool(offsets[6], object.isDeleted);
-  writer.writeBool(offsets[7], object.isLocked);
-  writer.writeBool(offsets[8], object.isPinned);
+  writer.writeStringList(offsets[0], object.adminEmails);
+  writer.writeStringList(offsets[1], object.collaborators);
+  writer.writeDateTime(offsets[2], object.createdAt);
+  writer.writeDouble(offsets[3], object.dashboardX);
+  writer.writeDouble(offsets[4], object.dashboardY);
+  writer.writeDateTime(offsets[5], object.deletedAt);
+  writer.writeString(offsets[6], object.driveFileId);
+  writer.writeBool(offsets[7], object.excludeFromBackup);
+  writer.writeString(offsets[8], object.id);
+  writer.writeBool(offsets[9], object.isDeleted);
+  writer.writeBool(offsets[10], object.isLocked);
+  writer.writeBool(offsets[11], object.isPinned);
+  writer.writeBool(offsets[12], object.isShared);
+  writer.writeString(offsets[13], object.lastEditedBy);
+  writer.writeString(offsets[14], object.ownerEmail);
   writer.writeObjectList<IsarNotePage>(
-    offsets[9],
+    offsets[15],
     allOffsets,
     IsarNotePageSchema.serialize,
     object.pages,
   );
-  writer.writeString(offsets[10], object.parentFolderId);
-  writer.writeStringList(offsets[11], object.tags);
-  writer.writeString(offsets[12], object.title);
-  writer.writeDateTime(offsets[13], object.updatedAt);
+  writer.writeString(offsets[16], object.parentFolderId);
+  writer.writeStringList(offsets[17], object.tags);
+  writer.writeString(offsets[18], object.title);
+  writer.writeDateTime(offsets[19], object.updatedAt);
 }
 
 IsarNoteDocument _isarNoteDocumentDeserialize(
@@ -200,27 +268,33 @@ IsarNoteDocument _isarNoteDocumentDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = IsarNoteDocument();
-  object.createdAt = reader.readDateTimeOrNull(offsets[0]);
-  object.dashboardX = reader.readDouble(offsets[1]);
-  object.dashboardY = reader.readDouble(offsets[2]);
-  object.deletedAt = reader.readDateTimeOrNull(offsets[3]);
-  object.excludeFromBackup = reader.readBool(offsets[4]);
-  object.id = reader.readStringOrNull(offsets[5]);
-  object.isDeleted = reader.readBool(offsets[6]);
-  object.isLocked = reader.readBool(offsets[7]);
-  object.isPinned = reader.readBool(offsets[8]);
+  object.adminEmails = reader.readStringList(offsets[0]) ?? [];
+  object.collaborators = reader.readStringList(offsets[1]) ?? [];
+  object.createdAt = reader.readDateTimeOrNull(offsets[2]);
+  object.dashboardX = reader.readDouble(offsets[3]);
+  object.dashboardY = reader.readDouble(offsets[4]);
+  object.deletedAt = reader.readDateTimeOrNull(offsets[5]);
+  object.driveFileId = reader.readStringOrNull(offsets[6]);
+  object.excludeFromBackup = reader.readBool(offsets[7]);
+  object.id = reader.readStringOrNull(offsets[8]);
+  object.isDeleted = reader.readBool(offsets[9]);
+  object.isLocked = reader.readBool(offsets[10]);
+  object.isPinned = reader.readBool(offsets[11]);
+  object.isShared = reader.readBool(offsets[12]);
   object.isarId = id;
+  object.lastEditedBy = reader.readStringOrNull(offsets[13]);
+  object.ownerEmail = reader.readStringOrNull(offsets[14]);
   object.pages = reader.readObjectList<IsarNotePage>(
-        offsets[9],
+        offsets[15],
         IsarNotePageSchema.deserialize,
         allOffsets,
         IsarNotePage(),
       ) ??
       [];
-  object.parentFolderId = reader.readStringOrNull(offsets[10]);
-  object.tags = reader.readStringList(offsets[11]) ?? [];
-  object.title = reader.readStringOrNull(offsets[12]);
-  object.updatedAt = reader.readDateTimeOrNull(offsets[13]);
+  object.parentFolderId = reader.readStringOrNull(offsets[16]);
+  object.tags = reader.readStringList(offsets[17]) ?? [];
+  object.title = reader.readStringOrNull(offsets[18]);
+  object.updatedAt = reader.readDateTimeOrNull(offsets[19]);
   return object;
 }
 
@@ -232,24 +306,36 @@ P _isarNoteDocumentDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readStringList(offset) ?? []) as P;
     case 1:
-      return (reader.readDouble(offset)) as P;
+      return (reader.readStringList(offset) ?? []) as P;
     case 2:
-      return (reader.readDouble(offset)) as P;
-    case 3:
       return (reader.readDateTimeOrNull(offset)) as P;
+    case 3:
+      return (reader.readDouble(offset)) as P;
     case 4:
-      return (reader.readBool(offset)) as P;
+      return (reader.readDouble(offset)) as P;
     case 5:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 6:
-      return (reader.readBool(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 7:
       return (reader.readBool(offset)) as P;
     case 8:
-      return (reader.readBool(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 9:
+      return (reader.readBool(offset)) as P;
+    case 10:
+      return (reader.readBool(offset)) as P;
+    case 11:
+      return (reader.readBool(offset)) as P;
+    case 12:
+      return (reader.readBool(offset)) as P;
+    case 13:
+      return (reader.readStringOrNull(offset)) as P;
+    case 14:
+      return (reader.readStringOrNull(offset)) as P;
+    case 15:
       return (reader.readObjectList<IsarNotePage>(
             offset,
             IsarNotePageSchema.deserialize,
@@ -257,13 +343,13 @@ P _isarNoteDocumentDeserializeProp<P>(
             IsarNotePage(),
           ) ??
           []) as P;
-    case 10:
+    case 16:
       return (reader.readStringOrNull(offset)) as P;
-    case 11:
+    case 17:
       return (reader.readStringList(offset) ?? []) as P;
-    case 12:
+    case 18:
       return (reader.readStringOrNull(offset)) as P;
-    case 13:
+    case 19:
       return (reader.readDateTimeOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -487,6 +573,456 @@ extension IsarNoteDocumentQueryWhere
 
 extension IsarNoteDocumentQueryFilter
     on QueryBuilder<IsarNoteDocument, IsarNoteDocument, QFilterCondition> {
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      adminEmailsElementEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'adminEmails',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      adminEmailsElementGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'adminEmails',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      adminEmailsElementLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'adminEmails',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      adminEmailsElementBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'adminEmails',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      adminEmailsElementStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'adminEmails',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      adminEmailsElementEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'adminEmails',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      adminEmailsElementContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'adminEmails',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      adminEmailsElementMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'adminEmails',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      adminEmailsElementIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'adminEmails',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      adminEmailsElementIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'adminEmails',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      adminEmailsLengthEqualTo(int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'adminEmails',
+        length,
+        true,
+        length,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      adminEmailsIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'adminEmails',
+        0,
+        true,
+        0,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      adminEmailsIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'adminEmails',
+        0,
+        false,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      adminEmailsLengthLessThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'adminEmails',
+        0,
+        true,
+        length,
+        include,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      adminEmailsLengthGreaterThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'adminEmails',
+        length,
+        include,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      adminEmailsLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'adminEmails',
+        lower,
+        includeLower,
+        upper,
+        includeUpper,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      collaboratorsElementEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'collaborators',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      collaboratorsElementGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'collaborators',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      collaboratorsElementLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'collaborators',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      collaboratorsElementBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'collaborators',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      collaboratorsElementStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'collaborators',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      collaboratorsElementEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'collaborators',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      collaboratorsElementContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'collaborators',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      collaboratorsElementMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'collaborators',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      collaboratorsElementIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'collaborators',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      collaboratorsElementIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'collaborators',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      collaboratorsLengthEqualTo(int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'collaborators',
+        length,
+        true,
+        length,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      collaboratorsIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'collaborators',
+        0,
+        true,
+        0,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      collaboratorsIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'collaborators',
+        0,
+        false,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      collaboratorsLengthLessThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'collaborators',
+        0,
+        true,
+        length,
+        include,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      collaboratorsLengthGreaterThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'collaborators',
+        length,
+        include,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      collaboratorsLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'collaborators',
+        lower,
+        includeLower,
+        upper,
+        includeUpper,
+      );
+    });
+  }
+
   QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
       createdAtIsNull() {
     return QueryBuilder.apply(this, (query) {
@@ -768,6 +1304,160 @@ extension IsarNoteDocumentQueryFilter
   }
 
   QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      driveFileIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'driveFileId',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      driveFileIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'driveFileId',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      driveFileIdEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'driveFileId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      driveFileIdGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'driveFileId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      driveFileIdLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'driveFileId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      driveFileIdBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'driveFileId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      driveFileIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'driveFileId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      driveFileIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'driveFileId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      driveFileIdContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'driveFileId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      driveFileIdMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'driveFileId',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      driveFileIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'driveFileId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      driveFileIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'driveFileId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
       excludeFromBackupEqualTo(bool value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -962,6 +1652,16 @@ extension IsarNoteDocumentQueryFilter
   }
 
   QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      isSharedEqualTo(bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isShared',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
       isarIdEqualTo(Id value) {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
@@ -1013,6 +1713,314 @@ extension IsarNoteDocumentQueryFilter
         includeLower: includeLower,
         upper: upper,
         includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      lastEditedByIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'lastEditedBy',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      lastEditedByIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'lastEditedBy',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      lastEditedByEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'lastEditedBy',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      lastEditedByGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'lastEditedBy',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      lastEditedByLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'lastEditedBy',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      lastEditedByBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'lastEditedBy',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      lastEditedByStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'lastEditedBy',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      lastEditedByEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'lastEditedBy',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      lastEditedByContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'lastEditedBy',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      lastEditedByMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'lastEditedBy',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      lastEditedByIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'lastEditedBy',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      lastEditedByIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'lastEditedBy',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      ownerEmailIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'ownerEmail',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      ownerEmailIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'ownerEmail',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      ownerEmailEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'ownerEmail',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      ownerEmailGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'ownerEmail',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      ownerEmailLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'ownerEmail',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      ownerEmailBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'ownerEmail',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      ownerEmailStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'ownerEmail',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      ownerEmailEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'ownerEmail',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      ownerEmailContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'ownerEmail',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      ownerEmailMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'ownerEmail',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      ownerEmailIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'ownerEmail',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      ownerEmailIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'ownerEmail',
+        value: '',
       ));
     });
   }
@@ -1786,6 +2794,20 @@ extension IsarNoteDocumentQuerySortBy
   }
 
   QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      sortByDriveFileId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'driveFileId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      sortByDriveFileIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'driveFileId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
       sortByExcludeFromBackup() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'excludeFromBackup', Sort.asc);
@@ -1851,6 +2873,48 @@ extension IsarNoteDocumentQuerySortBy
       sortByIsPinnedDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isPinned', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      sortByIsShared() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isShared', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      sortByIsSharedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isShared', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      sortByLastEditedBy() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastEditedBy', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      sortByLastEditedByDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastEditedBy', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      sortByOwnerEmail() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'ownerEmail', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      sortByOwnerEmailDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'ownerEmail', Sort.desc);
     });
   }
 
@@ -1955,6 +3019,20 @@ extension IsarNoteDocumentQuerySortThenBy
   }
 
   QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      thenByDriveFileId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'driveFileId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      thenByDriveFileIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'driveFileId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
       thenByExcludeFromBackup() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'excludeFromBackup', Sort.asc);
@@ -2024,6 +3102,20 @@ extension IsarNoteDocumentQuerySortThenBy
   }
 
   QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      thenByIsShared() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isShared', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      thenByIsSharedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isShared', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
       thenByIsarId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isarId', Sort.asc);
@@ -2034,6 +3126,34 @@ extension IsarNoteDocumentQuerySortThenBy
       thenByIsarIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isarId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      thenByLastEditedBy() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastEditedBy', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      thenByLastEditedByDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'lastEditedBy', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      thenByOwnerEmail() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'ownerEmail', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      thenByOwnerEmailDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'ownerEmail', Sort.desc);
     });
   }
 
@@ -2082,6 +3202,20 @@ extension IsarNoteDocumentQuerySortThenBy
 extension IsarNoteDocumentQueryWhereDistinct
     on QueryBuilder<IsarNoteDocument, IsarNoteDocument, QDistinct> {
   QueryBuilder<IsarNoteDocument, IsarNoteDocument, QDistinct>
+      distinctByAdminEmails() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'adminEmails');
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QDistinct>
+      distinctByCollaborators() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'collaborators');
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QDistinct>
       distinctByCreatedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'createdAt');
@@ -2106,6 +3240,13 @@ extension IsarNoteDocumentQueryWhereDistinct
       distinctByDeletedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'deletedAt');
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QDistinct>
+      distinctByDriveFileId({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'driveFileId', caseSensitive: caseSensitive);
     });
   }
 
@@ -2141,6 +3282,27 @@ extension IsarNoteDocumentQueryWhereDistinct
       distinctByIsPinned() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'isPinned');
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QDistinct>
+      distinctByIsShared() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isShared');
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QDistinct>
+      distinctByLastEditedBy({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'lastEditedBy', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QDistinct>
+      distinctByOwnerEmail({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'ownerEmail', caseSensitive: caseSensitive);
     });
   }
 
@@ -2181,6 +3343,20 @@ extension IsarNoteDocumentQueryProperty
     });
   }
 
+  QueryBuilder<IsarNoteDocument, List<String>, QQueryOperations>
+      adminEmailsProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'adminEmails');
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, List<String>, QQueryOperations>
+      collaboratorsProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'collaborators');
+    });
+  }
+
   QueryBuilder<IsarNoteDocument, DateTime?, QQueryOperations>
       createdAtProperty() {
     return QueryBuilder.apply(this, (query) {
@@ -2206,6 +3382,13 @@ extension IsarNoteDocumentQueryProperty
       deletedAtProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'deletedAt');
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, String?, QQueryOperations>
+      driveFileIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'driveFileId');
     });
   }
 
@@ -2237,6 +3420,26 @@ extension IsarNoteDocumentQueryProperty
   QueryBuilder<IsarNoteDocument, bool, QQueryOperations> isPinnedProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'isPinned');
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, bool, QQueryOperations> isSharedProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isShared');
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, String?, QQueryOperations>
+      lastEditedByProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'lastEditedBy');
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, String?, QQueryOperations>
+      ownerEmailProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'ownerEmail');
     });
   }
 
@@ -3155,68 +4358,93 @@ const IsarFolderSchema = CollectionSchema(
   name: r'IsarFolder',
   id: -7805229368695537870,
   properties: {
-    r'childFolderIds': PropertySchema(
+    r'adminEmails': PropertySchema(
       id: 0,
+      name: r'adminEmails',
+      type: IsarType.stringList,
+    ),
+    r'childFolderIds': PropertySchema(
+      id: 1,
       name: r'childFolderIds',
       type: IsarType.stringList,
     ),
+    r'collaborators': PropertySchema(
+      id: 2,
+      name: r'collaborators',
+      type: IsarType.stringList,
+    ),
     r'colorValue': PropertySchema(
-      id: 1,
+      id: 3,
       name: r'colorValue',
       type: IsarType.long,
     ),
     r'dashboardX': PropertySchema(
-      id: 2,
+      id: 4,
       name: r'dashboardX',
       type: IsarType.double,
     ),
     r'dashboardY': PropertySchema(
-      id: 3,
+      id: 5,
       name: r'dashboardY',
       type: IsarType.double,
     ),
     r'deletedAt': PropertySchema(
-      id: 4,
+      id: 6,
       name: r'deletedAt',
       type: IsarType.dateTime,
     ),
+    r'driveFileId': PropertySchema(
+      id: 7,
+      name: r'driveFileId',
+      type: IsarType.string,
+    ),
     r'iconCodePoint': PropertySchema(
-      id: 5,
+      id: 8,
       name: r'iconCodePoint',
       type: IsarType.long,
     ),
     r'id': PropertySchema(
-      id: 6,
+      id: 9,
       name: r'id',
       type: IsarType.string,
     ),
     r'isDeleted': PropertySchema(
-      id: 7,
+      id: 10,
       name: r'isDeleted',
       type: IsarType.bool,
     ),
     r'isPinned': PropertySchema(
-      id: 8,
+      id: 11,
       name: r'isPinned',
       type: IsarType.bool,
     ),
+    r'isShared': PropertySchema(
+      id: 12,
+      name: r'isShared',
+      type: IsarType.bool,
+    ),
     r'name': PropertySchema(
-      id: 9,
+      id: 13,
       name: r'name',
       type: IsarType.string,
     ),
     r'noteIds': PropertySchema(
-      id: 10,
+      id: 14,
       name: r'noteIds',
       type: IsarType.stringList,
     ),
+    r'ownerEmail': PropertySchema(
+      id: 15,
+      name: r'ownerEmail',
+      type: IsarType.string,
+    ),
     r'parentFolderId': PropertySchema(
-      id: 11,
+      id: 16,
       name: r'parentFolderId',
       type: IsarType.string,
     ),
     r'tags': PropertySchema(
-      id: 12,
+      id: 17,
       name: r'tags',
       type: IsarType.stringList,
     )
@@ -3255,11 +4483,31 @@ int _isarFolderEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
+  bytesCount += 3 + object.adminEmails.length * 3;
+  {
+    for (var i = 0; i < object.adminEmails.length; i++) {
+      final value = object.adminEmails[i];
+      bytesCount += value.length * 3;
+    }
+  }
   bytesCount += 3 + object.childFolderIds.length * 3;
   {
     for (var i = 0; i < object.childFolderIds.length; i++) {
       final value = object.childFolderIds[i];
       bytesCount += value.length * 3;
+    }
+  }
+  bytesCount += 3 + object.collaborators.length * 3;
+  {
+    for (var i = 0; i < object.collaborators.length; i++) {
+      final value = object.collaborators[i];
+      bytesCount += value.length * 3;
+    }
+  }
+  {
+    final value = object.driveFileId;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
     }
   }
   {
@@ -3279,6 +4527,12 @@ int _isarFolderEstimateSize(
     for (var i = 0; i < object.noteIds.length; i++) {
       final value = object.noteIds[i];
       bytesCount += value.length * 3;
+    }
+  }
+  {
+    final value = object.ownerEmail;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
     }
   }
   {
@@ -3303,19 +4557,24 @@ void _isarFolderSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeStringList(offsets[0], object.childFolderIds);
-  writer.writeLong(offsets[1], object.colorValue);
-  writer.writeDouble(offsets[2], object.dashboardX);
-  writer.writeDouble(offsets[3], object.dashboardY);
-  writer.writeDateTime(offsets[4], object.deletedAt);
-  writer.writeLong(offsets[5], object.iconCodePoint);
-  writer.writeString(offsets[6], object.id);
-  writer.writeBool(offsets[7], object.isDeleted);
-  writer.writeBool(offsets[8], object.isPinned);
-  writer.writeString(offsets[9], object.name);
-  writer.writeStringList(offsets[10], object.noteIds);
-  writer.writeString(offsets[11], object.parentFolderId);
-  writer.writeStringList(offsets[12], object.tags);
+  writer.writeStringList(offsets[0], object.adminEmails);
+  writer.writeStringList(offsets[1], object.childFolderIds);
+  writer.writeStringList(offsets[2], object.collaborators);
+  writer.writeLong(offsets[3], object.colorValue);
+  writer.writeDouble(offsets[4], object.dashboardX);
+  writer.writeDouble(offsets[5], object.dashboardY);
+  writer.writeDateTime(offsets[6], object.deletedAt);
+  writer.writeString(offsets[7], object.driveFileId);
+  writer.writeLong(offsets[8], object.iconCodePoint);
+  writer.writeString(offsets[9], object.id);
+  writer.writeBool(offsets[10], object.isDeleted);
+  writer.writeBool(offsets[11], object.isPinned);
+  writer.writeBool(offsets[12], object.isShared);
+  writer.writeString(offsets[13], object.name);
+  writer.writeStringList(offsets[14], object.noteIds);
+  writer.writeString(offsets[15], object.ownerEmail);
+  writer.writeString(offsets[16], object.parentFolderId);
+  writer.writeStringList(offsets[17], object.tags);
 }
 
 IsarFolder _isarFolderDeserialize(
@@ -3325,20 +4584,25 @@ IsarFolder _isarFolderDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = IsarFolder();
-  object.childFolderIds = reader.readStringList(offsets[0]) ?? [];
-  object.colorValue = reader.readLongOrNull(offsets[1]);
-  object.dashboardX = reader.readDouble(offsets[2]);
-  object.dashboardY = reader.readDouble(offsets[3]);
-  object.deletedAt = reader.readDateTimeOrNull(offsets[4]);
-  object.iconCodePoint = reader.readLongOrNull(offsets[5]);
-  object.id = reader.readStringOrNull(offsets[6]);
-  object.isDeleted = reader.readBool(offsets[7]);
-  object.isPinned = reader.readBool(offsets[8]);
+  object.adminEmails = reader.readStringList(offsets[0]) ?? [];
+  object.childFolderIds = reader.readStringList(offsets[1]) ?? [];
+  object.collaborators = reader.readStringList(offsets[2]) ?? [];
+  object.colorValue = reader.readLongOrNull(offsets[3]);
+  object.dashboardX = reader.readDouble(offsets[4]);
+  object.dashboardY = reader.readDouble(offsets[5]);
+  object.deletedAt = reader.readDateTimeOrNull(offsets[6]);
+  object.driveFileId = reader.readStringOrNull(offsets[7]);
+  object.iconCodePoint = reader.readLongOrNull(offsets[8]);
+  object.id = reader.readStringOrNull(offsets[9]);
+  object.isDeleted = reader.readBool(offsets[10]);
+  object.isPinned = reader.readBool(offsets[11]);
+  object.isShared = reader.readBool(offsets[12]);
   object.isarId = id;
-  object.name = reader.readStringOrNull(offsets[9]);
-  object.noteIds = reader.readStringList(offsets[10]) ?? [];
-  object.parentFolderId = reader.readStringOrNull(offsets[11]);
-  object.tags = reader.readStringList(offsets[12]) ?? [];
+  object.name = reader.readStringOrNull(offsets[13]);
+  object.noteIds = reader.readStringList(offsets[14]) ?? [];
+  object.ownerEmail = reader.readStringOrNull(offsets[15]);
+  object.parentFolderId = reader.readStringOrNull(offsets[16]);
+  object.tags = reader.readStringList(offsets[17]) ?? [];
   return object;
 }
 
@@ -3352,28 +4616,38 @@ P _isarFolderDeserializeProp<P>(
     case 0:
       return (reader.readStringList(offset) ?? []) as P;
     case 1:
-      return (reader.readLongOrNull(offset)) as P;
+      return (reader.readStringList(offset) ?? []) as P;
     case 2:
-      return (reader.readDouble(offset)) as P;
+      return (reader.readStringList(offset) ?? []) as P;
     case 3:
-      return (reader.readDouble(offset)) as P;
-    case 4:
-      return (reader.readDateTimeOrNull(offset)) as P;
-    case 5:
       return (reader.readLongOrNull(offset)) as P;
+    case 4:
+      return (reader.readDouble(offset)) as P;
+    case 5:
+      return (reader.readDouble(offset)) as P;
     case 6:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 7:
-      return (reader.readBool(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 8:
-      return (reader.readBool(offset)) as P;
+      return (reader.readLongOrNull(offset)) as P;
     case 9:
       return (reader.readStringOrNull(offset)) as P;
     case 10:
-      return (reader.readStringList(offset) ?? []) as P;
+      return (reader.readBool(offset)) as P;
     case 11:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 12:
+      return (reader.readBool(offset)) as P;
+    case 13:
+      return (reader.readStringOrNull(offset)) as P;
+    case 14:
+      return (reader.readStringList(offset) ?? []) as P;
+    case 15:
+      return (reader.readStringOrNull(offset)) as P;
+    case 16:
+      return (reader.readStringOrNull(offset)) as P;
+    case 17:
       return (reader.readStringList(offset) ?? []) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -3595,6 +4869,231 @@ extension IsarFolderQueryWhere
 extension IsarFolderQueryFilter
     on QueryBuilder<IsarFolder, IsarFolder, QFilterCondition> {
   QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      adminEmailsElementEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'adminEmails',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      adminEmailsElementGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'adminEmails',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      adminEmailsElementLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'adminEmails',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      adminEmailsElementBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'adminEmails',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      adminEmailsElementStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'adminEmails',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      adminEmailsElementEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'adminEmails',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      adminEmailsElementContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'adminEmails',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      adminEmailsElementMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'adminEmails',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      adminEmailsElementIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'adminEmails',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      adminEmailsElementIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'adminEmails',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      adminEmailsLengthEqualTo(int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'adminEmails',
+        length,
+        true,
+        length,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      adminEmailsIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'adminEmails',
+        0,
+        true,
+        0,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      adminEmailsIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'adminEmails',
+        0,
+        false,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      adminEmailsLengthLessThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'adminEmails',
+        0,
+        true,
+        length,
+        include,
+      );
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      adminEmailsLengthGreaterThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'adminEmails',
+        length,
+        include,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      adminEmailsLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'adminEmails',
+        lower,
+        includeLower,
+        upper,
+        includeUpper,
+      );
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
       childFolderIdsElementEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -3812,6 +5311,231 @@ extension IsarFolderQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.listLength(
         r'childFolderIds',
+        lower,
+        includeLower,
+        upper,
+        includeUpper,
+      );
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      collaboratorsElementEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'collaborators',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      collaboratorsElementGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'collaborators',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      collaboratorsElementLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'collaborators',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      collaboratorsElementBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'collaborators',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      collaboratorsElementStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'collaborators',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      collaboratorsElementEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'collaborators',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      collaboratorsElementContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'collaborators',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      collaboratorsElementMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'collaborators',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      collaboratorsElementIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'collaborators',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      collaboratorsElementIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'collaborators',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      collaboratorsLengthEqualTo(int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'collaborators',
+        length,
+        true,
+        length,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      collaboratorsIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'collaborators',
+        0,
+        true,
+        0,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      collaboratorsIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'collaborators',
+        0,
+        false,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      collaboratorsLengthLessThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'collaborators',
+        0,
+        true,
+        length,
+        include,
+      );
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      collaboratorsLengthGreaterThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'collaborators',
+        length,
+        include,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      collaboratorsLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'collaborators',
         lower,
         includeLower,
         upper,
@@ -4094,6 +5818,160 @@ extension IsarFolderQueryFilter
   }
 
   QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      driveFileIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'driveFileId',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      driveFileIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'driveFileId',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      driveFileIdEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'driveFileId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      driveFileIdGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'driveFileId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      driveFileIdLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'driveFileId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      driveFileIdBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'driveFileId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      driveFileIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'driveFileId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      driveFileIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'driveFileId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      driveFileIdContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'driveFileId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      driveFileIdMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'driveFileId',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      driveFileIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'driveFileId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      driveFileIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'driveFileId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
       iconCodePointIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
@@ -4328,6 +6206,16 @@ extension IsarFolderQueryFilter
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'isPinned',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition> isSharedEqualTo(
+      bool value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'isShared',
         value: value,
       ));
     });
@@ -4753,6 +6641,159 @@ extension IsarFolderQueryFilter
         upper,
         includeUpper,
       );
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      ownerEmailIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'ownerEmail',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      ownerEmailIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'ownerEmail',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition> ownerEmailEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'ownerEmail',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      ownerEmailGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'ownerEmail',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      ownerEmailLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'ownerEmail',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition> ownerEmailBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'ownerEmail',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      ownerEmailStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'ownerEmail',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      ownerEmailEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'ownerEmail',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      ownerEmailContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'ownerEmail',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition> ownerEmailMatches(
+      String pattern,
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'ownerEmail',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      ownerEmailIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'ownerEmail',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterFilterCondition>
+      ownerEmailIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'ownerEmail',
+        value: '',
+      ));
     });
   }
 
@@ -5189,6 +7230,18 @@ extension IsarFolderQuerySortBy
     });
   }
 
+  QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> sortByDriveFileId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'driveFileId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> sortByDriveFileIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'driveFileId', Sort.desc);
+    });
+  }
+
   QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> sortByIconCodePoint() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'iconCodePoint', Sort.asc);
@@ -5237,6 +7290,18 @@ extension IsarFolderQuerySortBy
     });
   }
 
+  QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> sortByIsShared() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isShared', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> sortByIsSharedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isShared', Sort.desc);
+    });
+  }
+
   QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> sortByName() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'name', Sort.asc);
@@ -5246,6 +7311,18 @@ extension IsarFolderQuerySortBy
   QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> sortByNameDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'name', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> sortByOwnerEmail() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'ownerEmail', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> sortByOwnerEmailDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'ownerEmail', Sort.desc);
     });
   }
 
@@ -5313,6 +7390,18 @@ extension IsarFolderQuerySortThenBy
     });
   }
 
+  QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> thenByDriveFileId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'driveFileId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> thenByDriveFileIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'driveFileId', Sort.desc);
+    });
+  }
+
   QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> thenByIconCodePoint() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'iconCodePoint', Sort.asc);
@@ -5361,6 +7450,18 @@ extension IsarFolderQuerySortThenBy
     });
   }
 
+  QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> thenByIsShared() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isShared', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> thenByIsSharedDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'isShared', Sort.desc);
+    });
+  }
+
   QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> thenByIsarId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'isarId', Sort.asc);
@@ -5385,6 +7486,18 @@ extension IsarFolderQuerySortThenBy
     });
   }
 
+  QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> thenByOwnerEmail() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'ownerEmail', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> thenByOwnerEmailDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'ownerEmail', Sort.desc);
+    });
+  }
+
   QueryBuilder<IsarFolder, IsarFolder, QAfterSortBy> thenByParentFolderId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'parentFolderId', Sort.asc);
@@ -5401,9 +7514,21 @@ extension IsarFolderQuerySortThenBy
 
 extension IsarFolderQueryWhereDistinct
     on QueryBuilder<IsarFolder, IsarFolder, QDistinct> {
+  QueryBuilder<IsarFolder, IsarFolder, QDistinct> distinctByAdminEmails() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'adminEmails');
+    });
+  }
+
   QueryBuilder<IsarFolder, IsarFolder, QDistinct> distinctByChildFolderIds() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'childFolderIds');
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QDistinct> distinctByCollaborators() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'collaborators');
     });
   }
 
@@ -5428,6 +7553,13 @@ extension IsarFolderQueryWhereDistinct
   QueryBuilder<IsarFolder, IsarFolder, QDistinct> distinctByDeletedAt() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'deletedAt');
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QDistinct> distinctByDriveFileId(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'driveFileId', caseSensitive: caseSensitive);
     });
   }
 
@@ -5456,6 +7588,12 @@ extension IsarFolderQueryWhereDistinct
     });
   }
 
+  QueryBuilder<IsarFolder, IsarFolder, QDistinct> distinctByIsShared() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'isShared');
+    });
+  }
+
   QueryBuilder<IsarFolder, IsarFolder, QDistinct> distinctByName(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -5466,6 +7604,13 @@ extension IsarFolderQueryWhereDistinct
   QueryBuilder<IsarFolder, IsarFolder, QDistinct> distinctByNoteIds() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'noteIds');
+    });
+  }
+
+  QueryBuilder<IsarFolder, IsarFolder, QDistinct> distinctByOwnerEmail(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'ownerEmail', caseSensitive: caseSensitive);
     });
   }
 
@@ -5493,9 +7638,23 @@ extension IsarFolderQueryProperty
   }
 
   QueryBuilder<IsarFolder, List<String>, QQueryOperations>
+      adminEmailsProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'adminEmails');
+    });
+  }
+
+  QueryBuilder<IsarFolder, List<String>, QQueryOperations>
       childFolderIdsProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'childFolderIds');
+    });
+  }
+
+  QueryBuilder<IsarFolder, List<String>, QQueryOperations>
+      collaboratorsProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'collaborators');
     });
   }
 
@@ -5523,6 +7682,12 @@ extension IsarFolderQueryProperty
     });
   }
 
+  QueryBuilder<IsarFolder, String?, QQueryOperations> driveFileIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'driveFileId');
+    });
+  }
+
   QueryBuilder<IsarFolder, int?, QQueryOperations> iconCodePointProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'iconCodePoint');
@@ -5547,6 +7712,12 @@ extension IsarFolderQueryProperty
     });
   }
 
+  QueryBuilder<IsarFolder, bool, QQueryOperations> isSharedProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'isShared');
+    });
+  }
+
   QueryBuilder<IsarFolder, String?, QQueryOperations> nameProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'name');
@@ -5556,6 +7727,12 @@ extension IsarFolderQueryProperty
   QueryBuilder<IsarFolder, List<String>, QQueryOperations> noteIdsProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'noteIds');
+    });
+  }
+
+  QueryBuilder<IsarFolder, String?, QQueryOperations> ownerEmailProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'ownerEmail');
     });
   }
 
@@ -5627,6 +7804,16 @@ const IsarUserSettingsSchema = CollectionSchema(
       id: 8,
       name: r'name',
       type: IsarType.string,
+    ),
+    r'sharedRootFolderId': PropertySchema(
+      id: 9,
+      name: r'sharedRootFolderId',
+      type: IsarType.string,
+    ),
+    r'visNotesFolderId': PropertySchema(
+      id: 10,
+      name: r'visNotesFolderId',
+      type: IsarType.string,
     )
   },
   estimateSize: _isarUserSettingsEstimateSize,
@@ -5679,6 +7866,18 @@ int _isarUserSettingsEstimateSize(
       bytesCount += 3 + value.length * 3;
     }
   }
+  {
+    final value = object.sharedRootFolderId;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
+    final value = object.visNotesFolderId;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   return bytesCount;
 }
 
@@ -5697,6 +7896,8 @@ void _isarUserSettingsSerialize(
   writer.writeBool(offsets[6], object.isLoggedIn);
   writer.writeDateTime(offsets[7], object.lastSyncTime);
   writer.writeString(offsets[8], object.name);
+  writer.writeString(offsets[9], object.sharedRootFolderId);
+  writer.writeString(offsets[10], object.visNotesFolderId);
 }
 
 IsarUserSettings _isarUserSettingsDeserialize(
@@ -5716,6 +7917,8 @@ IsarUserSettings _isarUserSettingsDeserialize(
   object.isarId = id;
   object.lastSyncTime = reader.readDateTimeOrNull(offsets[7]);
   object.name = reader.readStringOrNull(offsets[8]);
+  object.sharedRootFolderId = reader.readStringOrNull(offsets[9]);
+  object.visNotesFolderId = reader.readStringOrNull(offsets[10]);
   return object;
 }
 
@@ -5743,6 +7946,10 @@ P _isarUserSettingsDeserializeProp<P>(
     case 7:
       return (reader.readDateTimeOrNull(offset)) as P;
     case 8:
+      return (reader.readStringOrNull(offset)) as P;
+    case 9:
+      return (reader.readStringOrNull(offset)) as P;
+    case 10:
       return (reader.readStringOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -6837,6 +9044,314 @@ extension IsarUserSettingsQueryFilter
       ));
     });
   }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QAfterFilterCondition>
+      sharedRootFolderIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'sharedRootFolderId',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QAfterFilterCondition>
+      sharedRootFolderIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'sharedRootFolderId',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QAfterFilterCondition>
+      sharedRootFolderIdEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'sharedRootFolderId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QAfterFilterCondition>
+      sharedRootFolderIdGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'sharedRootFolderId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QAfterFilterCondition>
+      sharedRootFolderIdLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'sharedRootFolderId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QAfterFilterCondition>
+      sharedRootFolderIdBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'sharedRootFolderId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QAfterFilterCondition>
+      sharedRootFolderIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'sharedRootFolderId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QAfterFilterCondition>
+      sharedRootFolderIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'sharedRootFolderId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QAfterFilterCondition>
+      sharedRootFolderIdContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'sharedRootFolderId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QAfterFilterCondition>
+      sharedRootFolderIdMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'sharedRootFolderId',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QAfterFilterCondition>
+      sharedRootFolderIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'sharedRootFolderId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QAfterFilterCondition>
+      sharedRootFolderIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'sharedRootFolderId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QAfterFilterCondition>
+      visNotesFolderIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'visNotesFolderId',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QAfterFilterCondition>
+      visNotesFolderIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'visNotesFolderId',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QAfterFilterCondition>
+      visNotesFolderIdEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'visNotesFolderId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QAfterFilterCondition>
+      visNotesFolderIdGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'visNotesFolderId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QAfterFilterCondition>
+      visNotesFolderIdLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'visNotesFolderId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QAfterFilterCondition>
+      visNotesFolderIdBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'visNotesFolderId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QAfterFilterCondition>
+      visNotesFolderIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'visNotesFolderId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QAfterFilterCondition>
+      visNotesFolderIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'visNotesFolderId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QAfterFilterCondition>
+      visNotesFolderIdContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'visNotesFolderId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QAfterFilterCondition>
+      visNotesFolderIdMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'visNotesFolderId',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QAfterFilterCondition>
+      visNotesFolderIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'visNotesFolderId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QAfterFilterCondition>
+      visNotesFolderIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'visNotesFolderId',
+        value: '',
+      ));
+    });
+  }
 }
 
 extension IsarUserSettingsQueryObject
@@ -6968,6 +9483,34 @@ extension IsarUserSettingsQuerySortBy
       sortByNameDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'name', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QAfterSortBy>
+      sortBySharedRootFolderId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'sharedRootFolderId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QAfterSortBy>
+      sortBySharedRootFolderIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'sharedRootFolderId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QAfterSortBy>
+      sortByVisNotesFolderId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'visNotesFolderId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QAfterSortBy>
+      sortByVisNotesFolderIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'visNotesFolderId', Sort.desc);
     });
   }
 }
@@ -7111,6 +9654,34 @@ extension IsarUserSettingsQuerySortThenBy
       return query.addSortBy(r'name', Sort.desc);
     });
   }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QAfterSortBy>
+      thenBySharedRootFolderId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'sharedRootFolderId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QAfterSortBy>
+      thenBySharedRootFolderIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'sharedRootFolderId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QAfterSortBy>
+      thenByVisNotesFolderId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'visNotesFolderId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QAfterSortBy>
+      thenByVisNotesFolderIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'visNotesFolderId', Sort.desc);
+    });
+  }
 }
 
 extension IsarUserSettingsQueryWhereDistinct
@@ -7177,6 +9748,22 @@ extension IsarUserSettingsQueryWhereDistinct
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'name', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QDistinct>
+      distinctBySharedRootFolderId({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'sharedRootFolderId',
+          caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, IsarUserSettings, QDistinct>
+      distinctByVisNotesFolderId({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'visNotesFolderId',
+          caseSensitive: caseSensitive);
     });
   }
 }
@@ -7246,6 +9833,20 @@ extension IsarUserSettingsQueryProperty
   QueryBuilder<IsarUserSettings, String?, QQueryOperations> nameProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'name');
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, String?, QQueryOperations>
+      sharedRootFolderIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'sharedRootFolderId');
+    });
+  }
+
+  QueryBuilder<IsarUserSettings, String?, QQueryOperations>
+      visNotesFolderIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'visNotesFolderId');
     });
   }
 }

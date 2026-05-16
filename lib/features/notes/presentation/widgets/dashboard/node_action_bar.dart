@@ -98,6 +98,7 @@ class _NodeActionBarState extends State<NodeActionBar> {
                                 widget.onClose();
                               },
                             ),
+
                           _MenuOption(
                             icon: Icons.file_download_outlined,
                             label: 'Export Note',
@@ -481,6 +482,8 @@ class _NodeActionBarState extends State<NodeActionBar> {
       ),
     );
   }
+
+
 }
 
 class _MenuOption extends StatefulWidget {

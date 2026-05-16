@@ -23,6 +23,14 @@ class IsarNoteDocument {
   bool excludeFromBackup = false;
   bool isLocked = false;
   DateTime? deletedAt;
+
+  // Collaboration
+  String? ownerEmail;
+  String? lastEditedBy;
+  String? driveFileId;
+  bool isShared = false;
+  List<String> collaborators = []; // all collaborator emails (excluding owner)
+  List<String> adminEmails   = []; // subset of collaborators who are co-admins
   
   List<String> tags = [];
   
@@ -52,6 +60,13 @@ class IsarFolder {
   
   String? parentFolderId;
   bool isDeleted = false;
+
+  // Collaboration
+  String? ownerEmail;
+  String? driveFileId;
+  bool isShared = false;
+  List<String> collaborators = []; // all collaborator emails (excluding owner)
+  List<String> adminEmails   = []; // subset of collaborators who are co-admins
   DateTime? deletedAt;
   
   bool isPinned = false;
@@ -137,4 +152,8 @@ class IsarUserSettings {
   String? googleAccessToken;
   String? googleRefreshToken;
   DateTime? googleTokenExpiry;
+
+  // Google Drive folder IDs
+  String? visNotesFolderId;     // "VisNotes/" root folder
+  String? sharedRootFolderId;   // "VisNotes/Shared/" subfolder
 }

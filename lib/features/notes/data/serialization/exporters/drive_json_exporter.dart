@@ -2,8 +2,7 @@
 ///
 /// Implements [NoteExporter] and [NoteImporter] for the cloud sync use case.
 /// Serializes a [NoteSnapshotDto] to JSON and uploads/downloads it as
-/// `visnotes_sync_data.json` in the user's Google Drive (appDataFolder scope
-/// or drive.file scope, per app configuration).
+/// `visnotes_sync_data.json` inside the user's `VisNotes/` folder in Drive.
 library drive_json_exporter;
 
 import 'dart:convert';
@@ -15,8 +14,10 @@ import 'note_exporter.dart';
 class DriveJsonExporter implements NoteExporter, NoteImporter {
   final AuthClient authClient;
 
-  static const String _fileName = 'visnotes_sync_data.json';
-  static const String _mimeType = 'application/json';
+  static const String _fileName       = 'visnotes_sync_data.json';
+  static const String _folderName     = 'VisNotes';
+  static const String _mimeType       = 'application/json';
+  static const String _folderMimeType = 'application/vnd.google-apps.folder';
 
   const DriveJsonExporter({required this.authClient});
 
@@ -34,7 +35,8 @@ class DriveJsonExporter implements NoteExporter, NoteImporter {
     ExportOptions options = ExportOptions.full,
   }) async {
     try {
-      final driveApi = drive.DriveApi(authClient);
+      final driveApi  = drive.DriveApi(authClient);
+      final folderId  = await _getOrCreateVisNotesFolder(driveApi);
 
       final content = jsonEncode(snapshot.toJson());
       final bytes   = utf8.encode(content);
@@ -44,7 +46,7 @@ class DriveJsonExporter implements NoteExporter, NoteImporter {
         contentType: _mimeType,
       );
 
-      final existingId = await _findFileId(driveApi);
+      final existingId = await _findFileId(driveApi, folderId);
 
       if (existingId != null) {
         await driveApi.files.update(
@@ -57,7 +59,8 @@ class DriveJsonExporter implements NoteExporter, NoteImporter {
         final created = await driveApi.files.create(
           drive.File()
             ..name = _fileName
-            ..mimeType = _mimeType,
+            ..mimeType = _mimeType
+            ..parents = folderId != null ? [folderId] : null,
           uploadMedia: media,
         );
         return ExportResult.ok(
@@ -76,7 +79,8 @@ class DriveJsonExporter implements NoteExporter, NoteImporter {
   Future<NoteSnapshotDto?> importSnapshot() async {
     try {
       final driveApi = drive.DriveApi(authClient);
-      final fileId   = await _findFileId(driveApi);
+      final folderId = await _findVisNotesFolderId(driveApi);
+      final fileId   = await _findFileId(driveApi, folderId);
       if (fileId == null) return null;
 
       final media = await driveApi.files.get(
@@ -95,9 +99,35 @@ class DriveJsonExporter implements NoteExporter, NoteImporter {
 
   // ─── Helpers ─────────────────────────────────────────────────────────────
 
-  Future<String?> _findFileId(drive.DriveApi driveApi) async {
+  /// Returns the existing VisNotes folder ID, or null if not found.
+  Future<String?> _findVisNotesFolderId(drive.DriveApi driveApi) async {
     final list = await driveApi.files.list(
-      q: "name = '$_fileName' and trashed = false",
+      q: "name = '$_folderName' and mimeType = '$_folderMimeType' and trashed = false and 'root' in parents",
+      $fields: 'files(id)',
+    );
+    return list.files?.isNotEmpty == true ? list.files!.first.id : null;
+  }
+
+  /// Gets or creates the VisNotes/ folder and returns its ID.
+  Future<String?> _getOrCreateVisNotesFolder(drive.DriveApi driveApi) async {
+    final existing = await _findVisNotesFolderId(driveApi);
+    if (existing != null) return existing;
+
+    final created = await driveApi.files.create(
+      drive.File()
+        ..name = _folderName
+        ..mimeType = _folderMimeType,
+    );
+    return created.id;
+  }
+
+  /// Finds the backup JSON file inside the given folder (or Drive root if null).
+  Future<String?> _findFileId(drive.DriveApi driveApi, String? folderId) async {
+    final parentClause = folderId != null
+        ? "and '$folderId' in parents"
+        : "and 'root' in parents";
+    final list = await driveApi.files.list(
+      q: "name = '$_fileName' and trashed = false $parentClause",
       spaces: 'drive',
       $fields: 'files(id)',
     );

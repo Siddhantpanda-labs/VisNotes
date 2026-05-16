@@ -9,6 +9,12 @@ import '../widgets/dashboard/left_sidebar.dart';
 import '../bloc/dashboard/dashboard_bloc.dart';
 import '../widgets/dashboard/profile_section.dart';
 import '../../data/models/isar_note_model.dart';
+import '../bloc/auth/auth_bloc.dart';
+import '../bloc/collaboration/collaboration_bloc.dart';
+import '../widgets/collaborator_bar.dart';
+import '../../data/repositories/cloud_sync_repository.dart';
+import '../../data/repositories/note_repository.dart';
+
 
 class NotesDashboardPage extends StatefulWidget {
   const NotesDashboardPage({super.key});
@@ -61,10 +67,15 @@ class _NotesDashboardPageState extends State<NotesDashboardPage> {
                                             color: Colors.black.withOpacity(0.6),
                                           ),
                                         ),
-                                        Row(
-                                          children: [
-                                            if (state is DashboardLoaded && !state.isTrashView)
-                                              const ProfileButton(),
+                                          Row(
+                                            children: [
+                                              if (state is DashboardLoaded && !isRoot && !state.isTrashView)
+                                                Padding(
+                                                  padding: const EdgeInsets.only(right: 16),
+                                                  child: _FolderCollaboratorWrapper(folderId: currentFolder.id!),
+                                                ),
+                                              if (state is DashboardLoaded && !state.isTrashView)
+                                                const ProfileButton(),
                                             if (state is DashboardLoaded && state.isTrashView && state.notes.isNotEmpty)
                                               TextButton.icon(
                                                 onPressed: () => context.read<DashboardBloc>().add(EmptyTrash()),
@@ -469,6 +480,34 @@ class _BulkMoveTile extends StatelessWidget {
           onMove: onMove,
         )),
       ],
+    );
+  }
+}
+
+class _FolderCollaboratorWrapper extends StatelessWidget {
+  final String folderId;
+
+  const _FolderCollaboratorWrapper({required this.folderId});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, authState) {
+        if (authState is! Authenticated) return const SizedBox.shrink();
+
+        return BlocProvider(
+          key: ValueKey(folderId), // Re-create bloc when folder changes
+          create: (_) => CollaborationBloc(
+            cloudSync: context.read<CloudSyncRepository>(),
+            noteRepository: context.read<NoteRepository>(),
+            currentUserEmail: authState.user.email ?? '',
+          )..add(LoadCollaborators(itemId: folderId, isFolder: true)),
+          child: CollaboratorBar(
+            itemId: folderId,
+            isFolder: true,
+          ),
+        );
+      },
     );
   }
 }

@@ -208,7 +208,7 @@ class _NoteListItemState extends State<NoteListItem> {
                       ),
                     ],
                   ),
-                  if (widget.note.isLocked || widget.note.isPinned)
+                  if (widget.note.isLocked || widget.note.isPinned || widget.note.isShared)
                     Positioned(
                       top: 12,
                       left: 12,
@@ -217,10 +217,14 @@ class _NoteListItemState extends State<NoteListItem> {
                         children: [
                           if (widget.note.isLocked)
                             const Icon(Icons.lock, size: 14, color: Colors.black45),
-                          if (widget.note.isLocked && widget.note.isPinned)
+                          if (widget.note.isLocked && (widget.note.isPinned || widget.note.isShared))
                             const SizedBox(width: 4),
                           if (widget.note.isPinned)
                             const Icon(Icons.push_pin, size: 14, color: Colors.blueAccent),
+                          if (widget.note.isPinned && widget.note.isShared)
+                            const SizedBox(width: 4),
+                          if (widget.note.isShared)
+                            const Icon(Icons.group, size: 14, color: Colors.green),
                         ],
                       ),
                     ),
@@ -431,16 +435,20 @@ class _NoteListTileState extends State<NoteListTile> {
                       ],
                     ),
                   ),
-                  if (widget.note.isLocked || widget.note.isPinned)
+                  if (widget.note.isLocked || widget.note.isPinned || widget.note.isShared)
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         if (widget.note.isLocked)
                           const Icon(Icons.lock, size: 14, color: Colors.black45),
-                        if (widget.note.isLocked && widget.note.isPinned)
+                        if (widget.note.isLocked && (widget.note.isPinned || widget.note.isShared))
                           const SizedBox(width: 8),
                         if (widget.note.isPinned)
                           const Icon(Icons.push_pin, size: 14, color: Colors.blueAccent),
+                        if (widget.note.isPinned && widget.note.isShared)
+                          const SizedBox(width: 8),
+                        if (widget.note.isShared)
+                          const Icon(Icons.group, size: 14, color: Colors.green),
                       ],
                     ),
                 ],

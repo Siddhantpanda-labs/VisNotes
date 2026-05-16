@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/models/isar_note_model.dart';
 import '../../../data/models/app_settings_model.dart';
 import '../../../data/repositories/note_repository.dart';
+import '../../../data/repositories/cloud_sync_repository.dart';
 
 // Events
 abstract class DashboardEvent extends Equatable {
@@ -100,6 +102,8 @@ class PermanentlyDeleteItem extends DashboardEvent {
   final bool isFolder;
   const PermanentlyDeleteItem({required this.id, required this.isFolder});
 }
+
+
 
 class EmptyTrash extends DashboardEvent {}
 
@@ -283,8 +287,14 @@ class DashboardError extends DashboardState {
 // Bloc
 class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
   final NoteRepository repository;
+  final CloudSyncRepository cloudSyncRepository;
+  StreamSubscription? _repoSubscription;
+  String? _currentFolderId;
 
-  DashboardBloc({required this.repository}) : super(DashboardInitial()) {
+  DashboardBloc({
+    required this.repository,
+    required this.cloudSyncRepository,
+  }) : super(DashboardInitial()) {
     on<LoadDashboard>(_onLoadDashboard);
     on<OpenFolder>(_onOpenFolder);
     on<MoveItemToFolder>(_onMoveItemToFolder);
@@ -317,12 +327,25 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     on<UpdateLockSettings>(_onUpdateLockSettings);
     on<ResetPinAndClearLockedNotes>(_onResetPinAndClearLockedNotes);
     on<UnlockNoteTemporary>(_onUnlockNoteTemporary);
+
+    // Auto-refresh UI whenever data changes in the repository 
+    // (e.g. during logout cleanup or cloud restoration)
+    _repoSubscription = repository.onDataChanged.listen((_) {
+      add(const LoadDashboard(useCurrentFolder: true, isSilent: true));
+    });
+  }
+
+  @override
+  Future<void> close() {
+    _repoSubscription?.cancel();
+    return super.close();
   }
 
   Future<void> _onLoadDashboard(LoadDashboard event, Emitter<DashboardState> emit) async {
-    final folderId = event.useCurrentFolder 
-        ? (state is DashboardLoaded ? (state as DashboardLoaded).currentFolderId : null)
-        : event.folderId;
+    final folderId = event.useCurrentFolder ? _currentFolderId : event.folderId;
+    
+    // Update internal reference immediately
+    _currentFolderId = folderId;
     
     if (!event.isSilent) {
       emit(DashboardLoading());
@@ -758,4 +781,5 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
       emit(currentState.copyWith(tempUnlockedNoteIds: newUnlocked));
     }
   }
+
 }
