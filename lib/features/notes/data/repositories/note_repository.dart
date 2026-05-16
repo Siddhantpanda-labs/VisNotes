@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/isar_note_model.dart';
 
 class NoteRepository {
   late Future<Isar> db;
+  final _changeController = StreamController<void>.broadcast();
+  Stream<void> get onDataChanged => _changeController.stream;
 
   NoteRepository() {
     db = openDB();
@@ -13,7 +16,7 @@ class NoteRepository {
     if (Isar.instanceNames.isEmpty) {
       final dir = await getApplicationDocumentsDirectory();
       return await Isar.open(
-        [IsarNoteDocumentSchema, IsarFolderSchema, IsarTagSchema],
+        [IsarNoteDocumentSchema, IsarFolderSchema, IsarTagSchema, IsarUserSettingsSchema],
         directory: dir.path,
         inspector: true,
       );
@@ -51,6 +54,7 @@ class NoteRepository {
     await isar.writeTxn(() async {
       await isar.isarNoteDocuments.put(note);
     });
+    _changeController.add(null);
   }
 
   Future<void> trashNote(String id) async {
@@ -63,6 +67,7 @@ class NoteRepository {
         await isar.isarNoteDocuments.put(note);
       }
     });
+    _changeController.add(null);
   }
 
   Future<void> restoreNote(String id) async {
@@ -104,6 +109,7 @@ class NoteRepository {
         await isar.isarNoteDocuments.put(note);
       }
     });
+    _changeController.add(null);
   }
 
   // Folders
@@ -136,6 +142,7 @@ class NoteRepository {
     await isar.writeTxn(() async {
       await isar.isarFolders.put(folder);
     });
+    _changeController.add(null);
   }
 
   Future<void> trashFolder(String id) async {

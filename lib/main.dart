@@ -5,26 +5,41 @@ import 'features/notes/presentation/bloc/dashboard/dashboard_bloc.dart';
 import 'features/notes/presentation/pages/notes_dashboard_page.dart';
 import 'features/notes/presentation/pages/splash_screen.dart';
 
+import 'features/notes/presentation/bloc/auth/auth_bloc.dart';
+
+import 'features/notes/data/repositories/cloud_sync_repository.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final repository = NoteRepository();
-  runApp(VisNotesApp(repository: repository));
+  final cloudSyncRepository = CloudSyncRepository(repository);
+  runApp(VisNotesApp(repository: repository, cloudSyncRepository: cloudSyncRepository));
 }
 
 class VisNotesApp extends StatelessWidget {
   final NoteRepository repository;
-  const VisNotesApp({super.key, required this.repository});
+  final CloudSyncRepository cloudSyncRepository;
+  
+  const VisNotesApp({
+    super.key, 
+    required this.repository, 
+    required this.cloudSyncRepository
+  });
 
   @override
   Widget build(BuildContext context) {
     return MultiRepositoryProvider(
       providers: [
         RepositoryProvider.value(value: repository),
+        RepositoryProvider.value(value: cloudSyncRepository),
       ],
       child: MultiBlocProvider(
         providers: [
           BlocProvider(
             create: (context) => DashboardBloc(repository: repository)..add(LoadDashboard()),
+          ),
+          BlocProvider(
+            create: (context) => AuthBloc(repository, cloudSyncRepository)..add(AuthAppStarted()),
           ),
         ],
         child: MaterialApp(

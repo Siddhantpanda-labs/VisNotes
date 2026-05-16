@@ -6,14 +6,20 @@ import '../../domain/entities/text_content.dart';
 import '../models/isar_note_model.dart';
 
 class NoteMapper {
-  static IsarNoteDocument toIsar(NoteDocument domain) {
-    return IsarNoteDocument()
-      ..id = domain.id
-      ..title = domain.title
-      ..createdAt = domain.createdAt
-      ..updatedAt = domain.updatedAt
-      ..parentFolderId = domain.parentFolderId
-      ..pages = domain.pages.map((p) => _toIsarPage(p)).toList();
+  /// Converts a domain NoteDocument to an Isar model.
+  /// If [existing] is provided, only content fields are updated,
+  /// preserving metadata like isPinned, tags, excludeFromBackup, etc.
+  static IsarNoteDocument toIsar(NoteDocument domain, {IsarNoteDocument? existing}) {
+    final isar = existing ?? IsarNoteDocument();
+    isar.id = domain.id;
+    isar.title = domain.title;
+    isar.createdAt = domain.createdAt;
+    isar.updatedAt = domain.updatedAt;
+    isar.parentFolderId = domain.parentFolderId;
+    isar.pages = domain.pages.map((p) => _toIsarPage(p)).toList();
+    // Metadata fields (isPinned, tags, excludeFromBackup, dashboardX/Y)
+    // are only set if we're creating a new record (existing == null).
+    return isar;
   }
 
   static NoteDocument toDomain(IsarNoteDocument isar) {

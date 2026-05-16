@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../bloc/dashboard/dashboard_bloc.dart';
 import '../../../data/models/isar_note_model.dart';
 
-class NodeActionBar extends StatelessWidget {
+class NodeActionBar extends StatefulWidget {
   final String id;
   final bool isFolder;
   final String currentName;
@@ -19,17 +19,110 @@ class NodeActionBar extends StatelessWidget {
   });
 
   @override
+  State<NodeActionBar> createState() => _NodeActionBarState();
+}
+
+class _NodeActionBarState extends State<NodeActionBar> {
+  OverlayEntry? _moreMenuEntry;
+
+  void _hideMoreMenu() {
+    _moreMenuEntry?.remove();
+    _moreMenuEntry = null;
+  }
+
+  void _showMoreOptions(BuildContext context) {
+    _hideMoreMenu();
+    
+    final RenderBox renderBox = context.findRenderObject() as RenderBox;
+    final offset = renderBox.localToGlobal(Offset.zero);
+
+    _moreMenuEntry = OverlayEntry(
+      builder: (context) => Stack(
+        children: [
+          GestureDetector(
+            onTap: _hideMoreMenu,
+            child: Container(color: Colors.transparent),
+          ),
+          Positioned(
+            left: offset.dx + renderBox.size.width - 200, // Align towards right
+            bottom: MediaQuery.of(context).size.height - offset.dy + 10,
+            child: Material(
+              color: Colors.transparent,
+              child: TapRegion(
+                groupId: 'node_actions', // Link with the toolbar and note card
+                child: Container(
+                  width: 220,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.15),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                    border: Border.all(color: Colors.black.withOpacity(0.05)),
+                  ),
+                  child: BlocBuilder<DashboardBloc, DashboardState>(
+                    builder: (context, state) {
+                      bool isExcluded = false;
+                      if (state is DashboardLoaded && !widget.isFolder) {
+                        isExcluded = state.notes.any((n) => n.id == widget.id && n.excludeFromBackup);
+                      }
+
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (!widget.isFolder)
+                            _MenuOption(
+                              icon: isExcluded ? Icons.cloud_done_outlined : Icons.cloud_off_outlined,
+                              label: isExcluded ? 'Include in Backup' : 'Exclude from Backup',
+                              onTap: () {
+                                // Add event FIRST
+                                context.read<DashboardBloc>().add(ToggleBackupExclusion(id: widget.id));
+                                // Then hide menu and toolbar
+                                _hideMoreMenu();
+                                widget.onClose();
+                              },
+                            ),
+                          _MenuOption(
+                            icon: Icons.file_download_outlined,
+                            label: 'Export Note',
+                            onTap: () {
+                              _hideMoreMenu();
+                              widget.onClose();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Export coming soon!')),
+                              );
+                            },
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    Overlay.of(context).insert(_moreMenuEntry!);
+  }
+
+  @override
+  void dispose() {
+    _hideMoreMenu();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        GestureDetector(
-          onTap: onClose,
-          child: Container(
-            width: double.infinity,
-            height: double.infinity,
-            color: Colors.transparent,
-          ),
-        ),
         Positioned(
           bottom: 100,
           left: 260,
@@ -38,7 +131,8 @@ class NodeActionBar extends StatelessWidget {
             child: Material(
               color: Colors.transparent,
               child: TapRegion(
-                onTapOutside: (_) => onClose(),
+                groupId: 'node_actions',
+                onTapOutside: (_) => widget.onClose(),
                 child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
@@ -63,16 +157,16 @@ class NodeActionBar extends StatelessWidget {
                           IconButton(
                             icon: const Icon(Icons.restore, color: Colors.greenAccent, size: 18),
                             onPressed: () {
-                              context.read<DashboardBloc>().add(RestoreItem(id: id, isFolder: isFolder));
-                              onClose();
+                              context.read<DashboardBloc>().add(RestoreItem(id: widget.id, isFolder: widget.isFolder));
+                              widget.onClose();
                             },
                             tooltip: 'Restore',
                           ),
                           IconButton(
                             icon: const Icon(Icons.delete_forever, color: Colors.redAccent, size: 18),
                             onPressed: () {
-                              context.read<DashboardBloc>().add(PermanentlyDeleteItem(id: id, isFolder: isFolder));
-                              onClose();
+                              context.read<DashboardBloc>().add(PermanentlyDeleteItem(id: widget.id, isFolder: widget.isFolder));
+                              widget.onClose();
                             },
                             tooltip: 'Delete Permanently',
                           ),
@@ -82,10 +176,10 @@ class NodeActionBar extends StatelessWidget {
                               builder: (context, state) {
                                 bool isPinned = false;
                                 if (state is DashboardLoaded) {
-                                  if (isFolder) {
-                                    isPinned = state.folders.any((f) => f.id == id && f.isPinned);
+                                  if (widget.isFolder) {
+                                    isPinned = state.folders.any((f) => f.id == widget.id && f.isPinned);
                                   } else {
-                                    isPinned = state.notes.any((n) => n.id == id && n.isPinned);
+                                    isPinned = state.notes.any((n) => n.id == widget.id && n.isPinned);
                                   }
                                 }
                                 return Icon(
@@ -96,24 +190,24 @@ class NodeActionBar extends StatelessWidget {
                               },
                             ),
                             onPressed: () {
-                              context.read<DashboardBloc>().add(TogglePinNode(id: id, isFolder: isFolder));
-                              onClose();
+                              context.read<DashboardBloc>().add(TogglePinNode(id: widget.id, isFolder: widget.isFolder));
+                              widget.onClose();
                             },
                             tooltip: 'Pin',
                           ),
                           IconButton(
                             icon: const Icon(Icons.edit_outlined, color: Colors.white, size: 18),
                             onPressed: () {
-                              onClose();
+                              widget.onClose();
                               _showRenameDialog(context);
                             },
                             tooltip: 'Rename',
                           ),
-                          if (isFolder)
+                          if (widget.isFolder)
                             IconButton(
                               icon: const Icon(Icons.palette_outlined, color: Colors.white, size: 18),
                               onPressed: () {
-                                onClose();
+                                widget.onClose();
                                 _showColorIconPicker(context);
                               },
                               tooltip: 'Customize',
@@ -121,7 +215,7 @@ class NodeActionBar extends StatelessWidget {
                           IconButton(
                             icon: const Icon(Icons.label_outline_rounded, color: Colors.white, size: 18),
                             onPressed: () {
-                              onClose();
+                              widget.onClose();
                               _showTagDialog(context);
                             },
                             tooltip: 'Tags',
@@ -129,26 +223,24 @@ class NodeActionBar extends StatelessWidget {
                           IconButton(
                             icon: const Icon(Icons.drive_file_move_outlined, color: Colors.white, size: 18),
                             onPressed: () {
-                              onClose();
+                              widget.onClose();
                               _showMoveDialog(context);
                             },
                             tooltip: 'Move',
                           ),
                           IconButton(
-                            icon: const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
-                            onPressed: () {
-                              context.read<DashboardBloc>().add(ToggleSelection(id: id, isFolder: isFolder));
-                              onClose();
-                            },
-                            tooltip: 'Select',
-                          ),
-                          IconButton(
                             icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 18),
                             onPressed: () {
-                              context.read<DashboardBloc>().add(DeleteNode(id: id, isFolder: isFolder));
-                              onClose();
+                              context.read<DashboardBloc>().add(DeleteNode(id: widget.id, isFolder: widget.isFolder));
+                              widget.onClose();
                             },
                             tooltip: 'Move to Trash',
+                          ),
+                          // "..." dot to the right
+                          IconButton(
+                            icon: const Icon(Icons.more_horiz_rounded, color: Colors.white, size: 18),
+                            onPressed: () => _showMoreOptions(context),
+                            tooltip: 'More',
                           ),
                         ],
                       ],
@@ -163,6 +255,8 @@ class NodeActionBar extends StatelessWidget {
       ],
     );
   }
+
+  // --- Helper Dialogs ---
 
   void _showColorIconPicker(BuildContext context) {
     showDialog(
@@ -182,7 +276,7 @@ class NodeActionBar extends StatelessWidget {
                 0xFF3F51B5, 0xFF2196F3, 0xFF00BCD4, 0xFF009688, 0xFF4CAF50
               ].map((color) => GestureDetector(
                 onTap: () {
-                  context.read<DashboardBloc>().add(UpdateFolderCustomization(id: id, colorValue: color));
+                  context.read<DashboardBloc>().add(UpdateFolderCustomization(id: widget.id, colorValue: color));
                   Navigator.pop(ctx);
                 },
                 child: Container(
@@ -205,7 +299,7 @@ class NodeActionBar extends StatelessWidget {
                 Icons.book, Icons.code, Icons.image, Icons.music_note, Icons.shopping_bag
               ].map((icon) => IconButton(
                 onPressed: () {
-                  context.read<DashboardBloc>().add(UpdateFolderCustomization(id: id, iconCodePoint: icon.codePoint));
+                  context.read<DashboardBloc>().add(UpdateFolderCustomization(id: widget.id, iconCodePoint: icon.codePoint));
                   Navigator.pop(ctx);
                 },
                 icon: Icon(icon, color: Colors.black54),
@@ -224,16 +318,16 @@ class NodeActionBar extends StatelessWidget {
         builder: (context, state) {
           if (state is! DashboardLoaded) return const SizedBox.shrink();
           
-          final currentTags = isFolder 
-              ? state.folders.firstWhere((f) => f.id == id).tags 
-              : state.notes.firstWhere((n) => n.id == id).tags;
+          final currentTags = widget.isFolder 
+              ? state.folders.firstWhere((f) => f.id == widget.id).tags 
+              : state.notes.firstWhere((n) => n.id == widget.id).tags;
 
           return AlertDialog(
             title: Text('Tags', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
             content: SizedBox(
               width: 300,
               child: state.tags.isEmpty 
-                ? const Text('No tags created yet. Create one from the sidebar!')
+                ? const Text('No tags created yet.')
                 : Column(
                     mainAxisSize: MainAxisSize.min,
                     children: state.tags.map((tag) {
@@ -244,9 +338,9 @@ class NodeActionBar extends StatelessWidget {
                         activeColor: Color(tag.colorValue),
                         onChanged: (val) {
                           context.read<DashboardBloc>().add(ToggleTagOnNode(
-                            nodeId: id, 
+                            nodeId: widget.id, 
                             tagName: tag.name!, 
-                            isFolder: isFolder
+                            isFolder: widget.isFolder
                           ));
                         },
                         secondary: Container(
@@ -268,14 +362,14 @@ class NodeActionBar extends StatelessWidget {
   }
 
   void _showRenameDialog(BuildContext context) {
-    final TextEditingController controller = TextEditingController(text: currentName);
+    final TextEditingController controller = TextEditingController(text: widget.currentName);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
-          isFolder ? 'Rename Folder' : 'Rename Note',
+          widget.isFolder ? 'Rename Folder' : 'Rename Note',
           style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
         ),
         content: TextField(
@@ -300,11 +394,10 @@ class NodeActionBar extends StatelessWidget {
             onPressed: () {
               final newName = controller.text.trim();
               if (newName.isNotEmpty) {
-                // Accessing Bloc from original context
                 context.read<DashboardBloc>().add(RenameNode(
-                      id: id,
+                      id: widget.id,
                       newName: newName,
-                      isFolder: isFolder,
+                      isFolder: widget.isFolder,
                     ));
               }
               Navigator.pop(context);
@@ -320,6 +413,7 @@ class NodeActionBar extends StatelessWidget {
       ),
     );
   }
+
   void _showMoveDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -339,21 +433,19 @@ class NodeActionBar extends StatelessWidget {
               height: 400,
               child: ListView(
                 children: [
-                  // Root option
                   ListTile(
                     leading: const Icon(Icons.dashboard_outlined, size: 20),
                     title: Text('Root Dashboard', style: GoogleFonts.outfit(fontSize: 14)),
                     onTap: () {
                       context.read<DashboardBloc>().add(MoveItemToFolder(
-                        id: id,
+                        id: widget.id,
                         targetFolderId: null,
-                        isFolder: isFolder,
+                        isFolder: widget.isFolder,
                       ));
                       Navigator.pop(dialogCtx);
                     },
                   ),
                   const Divider(),
-                  // Folder tree
                   ...state.allFolders
                       .where((f) => f.parentFolderId == null)
                       .map((f) => _FolderPickerTile(
@@ -362,20 +454,62 @@ class NodeActionBar extends StatelessWidget {
                             depth: 0,
                             onMove: (targetId) {
                               context.read<DashboardBloc>().add(MoveItemToFolder(
-                                id: id,
+                                id: widget.id,
                                 targetFolderId: targetId,
-                                isFolder: isFolder,
+                                isFolder: widget.isFolder,
                               ));
                               Navigator.pop(dialogCtx);
                             },
-                            // Prevent moving into itself or its subtree if moving a folder
-                            disabledId: isFolder ? id : null,
+                            disabledId: widget.isFolder ? widget.id : null,
                           )),
                 ],
               ),
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _MenuOption extends StatefulWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _MenuOption({required this.icon, required this.label, required this.onTap});
+
+  @override
+  State<_MenuOption> createState() => _MenuOptionState();
+}
+
+class _MenuOptionState extends State<_MenuOption> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: _isHovered ? Colors.black.withOpacity(0.05) : Colors.transparent,
+          ),
+          child: Row(
+            children: [
+              Icon(widget.icon, size: 18, color: Colors.black87),
+              const SizedBox(width: 12),
+              Text(
+                widget.label,
+                style: GoogleFonts.outfit(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -399,7 +533,6 @@ class _FolderPickerTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (folder.id == disabledId) return const SizedBox.shrink();
-
     final children = allFolders.where((IsarFolder f) => f.parentFolderId == folder.id).toList();
 
     return Column(

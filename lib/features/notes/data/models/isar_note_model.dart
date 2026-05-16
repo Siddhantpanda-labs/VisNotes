@@ -20,6 +20,7 @@ class IsarNoteDocument {
   
   String? parentFolderId;
   bool isDeleted = false;
+  bool excludeFromBackup = false;
   DateTime? deletedAt;
   
   List<String> tags = [];
@@ -118,4 +119,21 @@ class IsarStroke {
 class IsarPoint {
   double x = 0;
   double y = 0;
+}
+
+@collection
+class IsarUserSettings {
+  Id isarId = Isar.autoIncrement;
+
+  String? name;
+  String? email;
+  String? avatarUrl;
+  bool isCloudSyncEnabled = false;
+  bool isLoggedIn = false;
+  DateTime? lastSyncTime;
+
+  // Google OAuth2 Tokens
+  String? googleAccessToken;
+  String? googleRefreshToken;
+  DateTime? googleTokenExpiry;
 }

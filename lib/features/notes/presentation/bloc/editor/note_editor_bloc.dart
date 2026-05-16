@@ -60,6 +60,10 @@ class NoteEditorBloc extends Bloc<NoteEditorEvent, NoteEditorState> {
     final selection = currentState.selection;
 
     final List<NotePage> newPages = List.from(doc.pages);
+    if (event.pageIndex < 0 || event.pageIndex >= newPages.length) {
+      print('[NoteEditorBloc] Warning: pageIndex ${event.pageIndex} out of bounds (length: ${newPages.length})');
+      return;
+    }
     final page = newPages[event.pageIndex];
 
     final List<NoteBlock> newBlocks = List.from(page.blocks);
@@ -133,7 +137,9 @@ class NoteEditorBloc extends Bloc<NoteEditorEvent, NoteEditorState> {
     if (state is! NoteEditorLoaded) return;
     final currentState = state as NoteEditorLoaded;
 
-    final isarDoc = NoteMapper.toIsar(currentState.document);
+    // Fetch the existing record to preserve metadata (isPinned, tags, excludeFromBackup, etc.)
+    final existing = await _noteRepository.getNoteById(currentState.document.id);
+    final isarDoc = NoteMapper.toIsar(currentState.document, existing: existing);
     await _noteRepository.saveNote(isarDoc);
     debugPrint('Note Auto-Saved: ${currentState.document.id}');
   }

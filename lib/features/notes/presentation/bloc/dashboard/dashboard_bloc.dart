@@ -105,7 +105,17 @@ class EmptyTrash extends DashboardEvent {}
 class ToggleSelection extends DashboardEvent {
   final String id;
   final bool isFolder;
-  const ToggleSelection({required this.id, required this.isFolder});
+  const ToggleSelection({required this.id, this.isFolder = false});
+}
+
+class SetSelectionMode extends DashboardEvent {
+  final bool enabled;
+  const SetSelectionMode(this.enabled);
+}
+
+class ToggleBackupExclusion extends DashboardEvent {
+  final String id;
+  const ToggleBackupExclusion({required this.id});
 }
 
 class ClearSelection extends DashboardEvent {}
@@ -258,6 +268,8 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     on<PermanentlyDeleteItem>(_onPermanentlyDeleteItem);
     on<EmptyTrash>(_onEmptyTrash);
     on<ToggleSelection>(_onToggleSelection);
+    on<SetSelectionMode>(_onSetSelectionMode);
+    on<ToggleBackupExclusion>(_onToggleBackupExclusion);
     on<ClearSelection>(_onClearSelection);
     on<BulkDelete>(_onBulkDelete);
     on<BulkMove>(_onBulkMove);
@@ -461,33 +473,53 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     add(const LoadDashboard(useCurrentFolder: true));
   }
 
-  void _onToggleSelection(ToggleSelection event, Emitter<DashboardState> emit) {
-    if (state is! DashboardLoaded) return;
-    final currentState = state as DashboardLoaded;
-
-    final newNoteIds = Set<String>.from(currentState.selectedNoteIds);
-    final newFolderIds = Set<String>.from(currentState.selectedFolderIds);
-
-    if (event.isFolder) {
-      if (newFolderIds.contains(event.id)) {
-        newFolderIds.remove(event.id);
-      } else {
-        newFolderIds.add(event.id);
-      }
-    } else {
-      if (newNoteIds.contains(event.id)) {
-        newNoteIds.remove(event.id);
-      } else {
-        newNoteIds.add(event.id);
-      }
+  Future<void> _onToggleBackupExclusion(ToggleBackupExclusion event, Emitter<DashboardState> emit) async {
+    final note = await repository.getNoteById(event.id);
+    if (note != null) {
+      note.excludeFromBackup = !note.excludeFromBackup;
+      await repository.saveNote(note);
+      add(const LoadDashboard(useCurrentFolder: true, isSilent: true));
     }
+  }
 
-    final isMode = newNoteIds.isNotEmpty || newFolderIds.isNotEmpty;
-    emit(currentState.copyWith(
-      selectedNoteIds: newNoteIds,
-      selectedFolderIds: newFolderIds,
-      isSelectionMode: isMode,
-    ));
+  void _onSetSelectionMode(SetSelectionMode event, Emitter<DashboardState> emit) {
+    if (state is DashboardLoaded) {
+      final s = state as DashboardLoaded;
+      emit(s.copyWith(
+        isSelectionMode: event.enabled,
+        selectedNoteIds: event.enabled ? s.selectedNoteIds : {},
+        selectedFolderIds: event.enabled ? s.selectedFolderIds : {},
+      ));
+    }
+  }
+
+  void _onToggleSelection(ToggleSelection event, Emitter<DashboardState> emit) {
+    if (state is DashboardLoaded) {
+      final s = state as DashboardLoaded;
+      final newNotes = Set<String>.from(s.selectedNoteIds);
+      final newFolders = Set<String>.from(s.selectedFolderIds);
+
+      if (event.isFolder) {
+        if (newFolders.contains(event.id)) {
+          newFolders.remove(event.id);
+        } else {
+          newFolders.add(event.id);
+        }
+      } else {
+        if (newNotes.contains(event.id)) {
+          newNotes.remove(event.id);
+        } else {
+          newNotes.add(event.id);
+        }
+      }
+
+      emit(s.copyWith(
+        selectedNoteIds: newNotes,
+        selectedFolderIds: newFolders,
+        // If something is selected, ensure selection mode is on
+        isSelectionMode: newNotes.isNotEmpty || newFolders.isNotEmpty,
+      ));
+    }
   }
 
   void _onClearSelection(ClearSelection event, Emitter<DashboardState> emit) {

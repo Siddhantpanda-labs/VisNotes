@@ -7,6 +7,7 @@ import '../widgets/dashboard/dashboard_toolbar.dart';
 import '../widgets/dashboard/explorer_panel.dart';
 import '../widgets/dashboard/left_sidebar.dart';
 import '../bloc/dashboard/dashboard_bloc.dart';
+import '../widgets/dashboard/profile_section.dart';
 import '../../data/models/isar_note_model.dart';
 
 class NotesDashboardPage extends StatefulWidget {
@@ -62,17 +63,8 @@ class _NotesDashboardPageState extends State<NotesDashboardPage> {
                                         ),
                                         Row(
                                           children: [
-                                            if (state is DashboardLoaded) ...[
-                                              IconButton(
-                                                onPressed: () => context.read<DashboardBloc>().add(ToggleViewMode()),
-                                                icon: Icon(
-                                                  state.isListView ? Icons.grid_view_rounded : Icons.view_list_rounded,
-                                                  size: 20,
-                                                  color: Colors.black38,
-                                                ),
-                                                tooltip: state.isListView ? 'Grid View' : 'List View',
-                                              ),
-                                            ],
+                                            if (state is DashboardLoaded && !state.isTrashView)
+                                              const ProfileButton(),
                                             if (state is DashboardLoaded && state.isTrashView && state.notes.isNotEmpty)
                                               TextButton.icon(
                                                 onPressed: () => context.read<DashboardBloc>().add(EmptyTrash()),
@@ -165,13 +157,28 @@ class _NotesDashboardPageState extends State<NotesDashboardPage> {
                             
                             return Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
-                              child: Text(
-                                state is DashboardLoaded && state.isTrashView ? 'Deleted Items' : 'Recent Notes',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black54,
-                                ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    state is DashboardLoaded && state.isTrashView ? 'Deleted Items' : 'Recent Notes',
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black54,
+                                    ),
+                                  ),
+                                  if (state is DashboardLoaded && !state.isTrashView)
+                                    IconButton(
+                                      onPressed: () => context.read<DashboardBloc>().add(ToggleViewMode()),
+                                      icon: Icon(
+                                        state.isListView ? Icons.grid_view_rounded : Icons.view_list_rounded,
+                                        size: 20,
+                                        color: Colors.black38,
+                                      ),
+                                      tooltip: state.isListView ? 'Grid View' : 'List View',
+                                    ),
+                                ],
                               ),
                             );
                           },
