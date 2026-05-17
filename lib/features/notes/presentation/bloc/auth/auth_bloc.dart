@@ -77,6 +77,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final NoteRepository repository;
   final CloudSyncRepository cloudSyncRepository;
   StreamSubscription? _syncSubscription;
+  Timer? _idlePollingTimer;
 
   AuthBloc(this.repository, this.cloudSyncRepository) : super(AuthInitial()) {
     on<AuthAppStarted>(_onAppStarted);
@@ -88,7 +89,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<SyncNow>(_onSyncNow);
     on<RestoreFromDrive>(_onRestoreFromDrive);
 
-    // Auto-sync: debounce 5 s after last data change
+    // Auto-sync: debounce 1 min after last data change
     _syncSubscription = repository.onDataChanged
         .debounceTime(const Duration(minutes: 1))
         .listen((_) {
@@ -97,11 +98,20 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
             add(SyncNow());
           }
         });
+        
+    // Idle Polling: constantly check for incoming shared changes every 5 minutes
+    _idlePollingTimer = Timer.periodic(const Duration(minutes: 5), (_) {
+      if (state is Authenticated &&
+          (state as Authenticated).user.isCloudSyncEnabled) {
+        add(SyncNow());
+      }
+    });
   }
 
   @override
   Future<void> close() {
     _syncSubscription?.cancel();
+    _idlePollingTimer?.cancel();
     return super.close();
   }
 
@@ -190,7 +200,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
         // Step 3.5: Clean up any shared notes whose access was revoked
         print('[AuthBloc] Cleaning up revoked shared items...');
-        await cloudSyncRepository.cleanupRevokedSharedItems();
+        await cloudSyncRepository.cleanupRevokedSharedItems(cloudUser.email);
 
         // Step 4: Fetch shared items (outside transaction)
         print('[AuthBloc] Fetching shared items...');

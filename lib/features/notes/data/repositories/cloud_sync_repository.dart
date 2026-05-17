@@ -380,18 +380,32 @@ class CloudSyncRepository {
           isFolder ? (item as IsarFolder).collaborators : (item as IsarNoteDocument).collaborators);
       final currentAdmins = List<String>.from(
           isFolder ? (item as IsarFolder).adminEmails : (item as IsarNoteDocument).adminEmails);
-      final ownerEmail = isFolder
+      final ownerEmail = (isFolder
           ? (item as IsarFolder).ownerEmail
-          : (item as IsarNoteDocument).ownerEmail;
+          : (item as IsarNoteDocument).ownerEmail)?.trim().toLowerCase();
+          
+      final currentUserEmailLower = currentUserEmail.trim().toLowerCase();
+      final emailToRemoveLower = emailToRemove.trim().toLowerCase();
+
+      // If ownerEmail is null, it means this note originated locally and the current user is the owner.
+      final isOwner = ownerEmail == null || ownerEmail == currentUserEmailLower;
 
       // Permission check: only owner or admins can remove others
-      final isCurrentUserAdmin = currentAdmins.contains(currentUserEmail) || ownerEmail == currentUserEmail;
-      if (!isCurrentUserAdmin && emailToRemove != currentUserEmail) {
+      final isCurrentUserAdmin = currentAdmins.any((e) => e.trim().toLowerCase() == currentUserEmailLower) || isOwner;
+      
+      print('[CloudSync Debug] removeCollaborator:');
+      print('  - currentUserEmail: $currentUserEmail ($currentUserEmailLower)');
+      print('  - emailToRemove: $emailToRemove ($emailToRemoveLower)');
+      print('  - ownerEmail: $ownerEmail');
+      print('  - currentAdmins: $currentAdmins');
+      print('  - isCurrentUserAdmin: $isCurrentUserAdmin');
+
+      if (!isCurrentUserAdmin && emailToRemoveLower != currentUserEmailLower) {
         return CollaborationFailure('Only admins can remove collaborators.');
       }
 
       // Cannot remove the owner
-      if (emailToRemove == ownerEmail) {
+      if (emailToRemoveLower == ownerEmail) {
         return CollaborationFailure('Cannot remove the owner. Transfer ownership first.');
       }
 
@@ -399,13 +413,19 @@ class CloudSyncRepository {
       await _revokePermission(driveFileId, emailToRemove);
 
       // Update local lists
-      currentCollaborators.remove(emailToRemove);
-      currentAdmins.remove(emailToRemove);
+      currentCollaborators.removeWhere((e) => e.trim().toLowerCase() == emailToRemoveLower);
+      currentAdmins.removeWhere((e) => e.trim().toLowerCase() == emailToRemoveLower);
 
       if (isFolder) {
         await noteRepository.updateFolderCollaborators(itemId, currentCollaborators, currentAdmins);
+        if (currentCollaborators.isEmpty) {
+          await noteRepository.updateItemSharedStatus(itemId, true, isShared: false, driveFileId: driveFileId);
+        }
       } else {
         await noteRepository.updateNoteCollaborators(itemId, currentCollaborators, currentAdmins);
+        if (currentCollaborators.isEmpty) {
+          await noteRepository.updateItemSharedStatus(itemId, false, isShared: false, driveFileId: driveFileId);
+        }
       }
 
       // Sync updated metadata to Drive so the removed user sees the change
@@ -440,29 +460,36 @@ class CloudSyncRepository {
           : await noteRepository.getNoteById(itemId);
       if (item == null) return CollaborationFailure('Item not found.');
 
-      final ownerEmail = isFolder
+      final ownerEmail = (isFolder
           ? (item as IsarFolder).ownerEmail
-          : (item as IsarNoteDocument).ownerEmail;
+          : (item as IsarNoteDocument).ownerEmail)?.trim().toLowerCase();
       final currentAdmins = List<String>.from(
           isFolder ? (item as IsarFolder).adminEmails : (item as IsarNoteDocument).adminEmails);
       final collaborators = List<String>.from(
           isFolder ? (item as IsarFolder).collaborators : (item as IsarNoteDocument).collaborators);
 
-      final isCurrentUserAuthorized = ownerEmail == currentUserEmail || currentAdmins.contains(currentUserEmail);
+      final currentUserEmailLower = currentUserEmail.trim().toLowerCase();
+      final targetEmailLower = targetEmail.trim().toLowerCase();
+
+      // If ownerEmail is null, it means this note originated locally and the current user is the owner.
+      final isOwner = ownerEmail == null || ownerEmail == currentUserEmailLower;
+
+      final isCurrentUserAuthorized = isOwner || currentAdmins.any((e) => e.trim().toLowerCase() == currentUserEmailLower);
       if (!isCurrentUserAuthorized) {
         return CollaborationFailure('Only admins can change roles.');
       }
-      if (targetEmail == ownerEmail) {
+      if (targetEmailLower == ownerEmail) {
         return CollaborationFailure('Cannot change the owner\'s role.');
       }
-      if (!collaborators.contains(targetEmail)) {
+      if (!collaborators.any((e) => e.trim().toLowerCase() == targetEmailLower)) {
         return CollaborationFailure('$targetEmail is not a collaborator.');
       }
 
-      if (makeAdmin && !currentAdmins.contains(targetEmail)) {
+      final isTargetAlreadyAdmin = currentAdmins.any((e) => e.trim().toLowerCase() == targetEmailLower);
+      if (makeAdmin && !isTargetAlreadyAdmin) {
         currentAdmins.add(targetEmail);
       } else if (!makeAdmin) {
-        currentAdmins.remove(targetEmail);
+        currentAdmins.removeWhere((e) => e.trim().toLowerCase() == targetEmailLower);
       }
 
       if (isFolder) {
@@ -608,11 +635,24 @@ class CloudSyncRepository {
         await _revokePermission(driveFileId, currentUserEmail);
       }
 
-      // Delete the item locally (clean rule)
+      // Convert the item locally to a personal copy
       if (isFolder) {
-        await noteRepository.permanentlyDeleteFolder(itemId);
+        final folder = item as IsarFolder;
+        folder.driveFileId = null;
+        folder.ownerEmail = currentUserEmail;
+        folder.collaborators = [];
+        folder.adminEmails = [];
+        folder.isShared = false;
+        await noteRepository.saveFolder(folder);
       } else {
-        await noteRepository.permanentlyDeleteNote(itemId);
+        final note = item as IsarNoteDocument;
+        note.driveFileId = null;
+        note.ownerEmail = currentUserEmail;
+        note.collaborators = [];
+        note.adminEmails = [];
+        note.isShared = false;
+        note.updatedAt = DateTime.now();
+        await noteRepository.saveNote(note);
       }
 
       print('[CloudSync] $currentUserEmail left collaboration on $itemId');
@@ -676,8 +716,8 @@ class CloudSyncRepository {
       final mySharedFolderId = await _getOrCreateSharedFolder();
 
       final list = await driveApi.files.list(
-        q: "sharedWithMe = true and mimeType = 'application/json' and trashed = false",
-        $fields: 'files(id, name, owners)',
+        q: "sharedWithMe = true and (mimeType = 'application/json' or mimeType = 'application/vnd.google-apps.folder') and trashed = false",
+        $fields: 'files(id, name, mimeType, description, owners, modifiedTime)',
       );
 
       if (list.files == null || list.files!.isEmpty) {
@@ -686,7 +726,34 @@ class CloudSyncRepository {
         return;
       }
 
-      for (final file in list.files!) {
+      final sharedFolders = list.files!.where((f) => f.mimeType == 'application/vnd.google-apps.folder').toList();
+      final sharedNotes = list.files!.where((f) => f.mimeType == 'application/json').toList();
+
+      // 1. Process Folders first so local parents exist for children
+      for (final file in sharedFolders) {
+        // Only process folders that have a JSON description (our metadata payload)
+        if (file.description == null || !file.description!.trim().startsWith('{')) continue;
+
+        print('[CloudSync] Processing shared folder: ${file.name} (${file.id})');
+        if (mySharedFolderId != null) {
+          try {
+            await driveApi.files.create(
+              drive.File()
+                ..name = file.name
+                ..mimeType = 'application/vnd.google-apps.shortcut'
+                ..parents = [mySharedFolderId]
+                ..shortcutDetails = (drive.FileShortcutDetails()..targetId = file.id),
+            );
+          } catch (_) {}
+        }
+        await _importSharedFolder(file.id!, file.description, file.owners?.first.emailAddress);
+        
+        // Fetch notes inside this shared folder (they don't show up in sharedWithMe = true)
+        await _fetchChildrenOfSharedFolder(file.id!);
+      }
+
+      // 2. Process Notes
+      for (final file in sharedNotes) {
         if (file.name == null || !file.name!.startsWith('note_')) continue;
         print('[CloudSync] Processing shared file: ${file.name} (${file.id})');
 
@@ -704,7 +771,7 @@ class CloudSyncRepository {
             // Shortcut already exists — not an error
           }
         }
-        await _importSharedNote(file.id!, file.owners?.first.emailAddress);
+        await _importSharedNote(file.id!, file.name!, file.owners?.first.emailAddress, file.modifiedTime);
         print('[CloudSync] Imported shared note: ${file.name}');
       }
       _isOperationInProgress = false;
@@ -715,8 +782,8 @@ class CloudSyncRepository {
   }
 
   /// On login: checks each locally-stored shared note/folder against Drive.
-  /// If the file returns 403/404, the user no longer has access — delete locally.
-  Future<void> cleanupRevokedSharedItems() async {
+  /// If the file returns 403/404, the user no longer has access — convert to local copy.
+  Future<void> cleanupRevokedSharedItems(String currentUserEmail) async {
     try {
       final driveApi = await _getDriveApi();
 
@@ -726,8 +793,14 @@ class CloudSyncRepository {
         try {
           await driveApi.files.get(note.driveFileId!, $fields: 'id');
         } catch (_) {
-          print('[CloudSync] Access revoked for note ${note.id}, deleting locally.');
-          await noteRepository.permanentlyDeleteNote(note.id!);
+          print('[CloudSync] Access revoked for note ${note.id}, converting to local copy.');
+          note.driveFileId = null;
+          note.ownerEmail = currentUserEmail;
+          note.collaborators = [];
+          note.adminEmails = [];
+          note.isShared = false;
+          note.updatedAt = DateTime.now();
+          await noteRepository.saveNote(note);
         }
       }
 
@@ -737,8 +810,13 @@ class CloudSyncRepository {
         try {
           await driveApi.files.get(folder.driveFileId!, $fields: 'id');
         } catch (_) {
-          print('[CloudSync] Access revoked for folder ${folder.id}, deleting locally.');
-          await noteRepository.permanentlyDeleteFolder(folder.id!);
+          print('[CloudSync] Access revoked for folder ${folder.id}, converting to local copy.');
+          folder.driveFileId = null;
+          folder.ownerEmail = currentUserEmail;
+          folder.collaborators = [];
+          folder.adminEmails = [];
+          folder.isShared = false;
+          await noteRepository.saveFolder(folder);
         }
       }
     } catch (e) {
@@ -805,15 +883,7 @@ class CloudSyncRepository {
     await _grantWritePermission(driveFolderId, email);
 
     // Upload and grant access to all child notes
-    final childNotes = await noteRepository.getNotesByParent(folderId);
-    for (final note in childNotes) {
-      final noteFileId = await _uploadIndividualNote(note, driveFolderId);
-      if (noteFileId != null) {
-        await _grantWritePermission(noteFileId, email);
-        await noteRepository.updateItemSharedStatus(
-            note.id!, false, isShared: true, driveFileId: noteFileId);
-      }
-    }
+    await _recursivelyShareChildren(folderId, driveFolderId, email);
 
     // Update local collaborators list
     final collaborators = List<String>.from(folder.collaborators);
@@ -835,14 +905,23 @@ class CloudSyncRepository {
   /// collaborators and adminEmails lists.
   Future<void> _syncCollaborationMetadata(String itemId, bool isFolder) async {
     try {
+      final driveApi = await _getDriveApi();
       if (isFolder) {
-        // Folders don't have a JSON body — metadata is in the Drive folder itself.
-        // Nothing extra to sync; local state is authoritative.
+        final folder = await noteRepository.getFolderById(itemId);
+        if (folder == null || folder.driveFileId == null) return;
+        
+        final dto = IsarFolderMapper.toDto(folder);
+        final description = jsonEncode(dto.toJson());
+        
+        await driveApi.files.update(
+          drive.File()..description = description,
+          folder.driveFileId!,
+        );
         return;
       }
       final note = await noteRepository.getNoteById(itemId);
       if (note == null || note.driveFileId == null) return;
-      final driveApi = await _getDriveApi();
+      
       final dto = IsarNoteMapper.toDto(note);
       final content = jsonEncode(dto.toJson());
       final bytes = utf8.encode(content);
@@ -913,11 +992,16 @@ class CloudSyncRepository {
   Future<String?> _uploadIndividualFolder(IsarFolder folder, String parentId) async {
     final driveApi = await _getDriveApi();
     if (folder.driveFileId != null) return folder.driveFileId;
+    
+    final dto = IsarFolderMapper.toDto(folder);
+    final description = jsonEncode(dto.toJson());
+
     final created = await driveApi.files.create(
       drive.File()
         ..name     = folder.name ?? 'Untitled Folder'
         ..parents  = [parentId]
-        ..mimeType = 'application/vnd.google-apps.folder',
+        ..mimeType = 'application/vnd.google-apps.folder'
+        ..description = description,
     );
     return created.id;
   }
@@ -940,7 +1024,24 @@ class CloudSyncRepository {
     }
   }
 
-  Future<void> _importSharedNote(String fileId, String? ownerEmail) async {
+  Future<void> _importSharedNote(String fileId, String fileName, String? ownerEmail, DateTime? driveModifiedTime) async {
+    // 1. Fast Path Optimization: Skip downloading large JSON if our local DB is already up-to-date
+    try {
+      if (driveModifiedTime != null && fileName.startsWith('note_')) {
+        final localId = fileName.replaceAll('note_', '').replaceAll('.json', '');
+        final existingNote = await noteRepository.getNoteById(localId);
+        if (existingNote != null && existingNote.updatedAt != null) {
+          final localUpdatedUtc = existingNote.updatedAt!.toUtc();
+          // If Drive's modification time is roughly equal to (or older than) our local copy, skip download!
+          // We add a 1-minute buffer to absorb the small latency gap between local save and Drive upload completion.
+          if (driveModifiedTime.isBefore(localUpdatedUtc.add(const Duration(minutes: 1)))) {
+            return; 
+          }
+        }
+      }
+    } catch (_) {} // On any parsing error, safely fallback to full download.
+
+    // 2. Slow Path: Download from Drive
     final driveApi = await _getDriveApi();
     final media = await driveApi.files.get(
         fileId, downloadOptions: drive.DownloadOptions.fullMedia) as drive.Media;
@@ -951,7 +1052,105 @@ class CloudSyncRepository {
     note.isShared    = true;
     note.driveFileId = fileId;
     note.ownerEmail  = ownerEmail;
+    
+    // Check if the parent folder exists locally. If not, orphan it to the root
+    // so it's not hidden forever.
+    if (note.parentFolderId != null) {
+      final parentFolder = await noteRepository.getFolderById(note.parentFolderId!);
+      if (parentFolder == null) {
+        note.parentFolderId = null;
+      }
+    }
+
     await noteRepository.saveNote(note);
+  }
+
+  Future<void> _importSharedFolder(String fileId, String? description, String? ownerEmail) async {
+    if (description == null || description.isEmpty) return;
+    try {
+      final dto = FolderDto.fromJson(jsonDecode(description) as Map<String, dynamic>);
+      final folder = IsarFolderMapper.fromDto(dto);
+      folder.isShared = true;
+      folder.driveFileId = fileId;
+      folder.ownerEmail = ownerEmail;
+      
+      // If parent folder was not shared or doesn't exist, move to root.
+      if (folder.parentFolderId != null) {
+        final parentFolder = await noteRepository.getFolderById(folder.parentFolderId!);
+        if (parentFolder == null) {
+          folder.parentFolderId = null;
+        }
+      }
+
+      await noteRepository.saveFolder(folder);
+    } catch (e) {
+      print('[CloudSync] _importSharedFolder failed to parse description: $e');
+    }
+  }
+
+  Future<void> _fetchChildrenOfSharedFolder(String driveFolderId) async {
+    try {
+      final driveApi = await _getDriveApi();
+      final list = await driveApi.files.list(
+        q: "'$driveFolderId' in parents and (mimeType = 'application/json' or mimeType = 'application/vnd.google-apps.folder') and trashed = false",
+        $fields: 'files(id, name, mimeType, description, owners, modifiedTime)',
+      );
+      if (list.files == null) return;
+      
+      final sharedFolders = list.files!.where((f) => f.mimeType == 'application/vnd.google-apps.folder').toList();
+      final sharedNotes = list.files!.where((f) => f.mimeType == 'application/json').toList();
+
+      for (final file in sharedFolders) {
+        if (file.description == null || !file.description!.trim().startsWith('{')) continue;
+        print('[CloudSync] Processing child folder: ${file.name} (${file.id})');
+        await _importSharedFolder(file.id!, file.description, file.owners?.first?.emailAddress);
+        // Recurse into this child folder
+        await _fetchChildrenOfSharedFolder(file.id!);
+      }
+
+      for (final file in sharedNotes) {
+        if (file.name == null || !file.name!.startsWith('note_')) continue;
+        print('[CloudSync] Processing child note: ${file.name} (${file.id})');
+        await _importSharedNote(file.id!, file.name!, file.owners?.first?.emailAddress, file.modifiedTime);
+      }
+    } catch (e) {
+      print('[CloudSync] _fetchChildrenOfSharedFolder failed: $e');
+    }
+  }
+
+  Future<void> _recursivelyShareChildren(String localFolderId, String driveFolderId, String email) async {
+    // 1. Share Child Notes
+    final childNotes = await noteRepository.getNotesByParent(localFolderId);
+    for (final note in childNotes) {
+      final noteFileId = await _uploadIndividualNote(note, driveFolderId);
+      if (noteFileId != null) {
+        await _grantWritePermission(noteFileId, email);
+        await noteRepository.updateItemSharedStatus(
+            note.id!, false, isShared: true, driveFileId: noteFileId);
+      }
+    }
+
+    // 2. Share Child Folders
+    final childFolders = await noteRepository.getFoldersByParent(localFolderId);
+    for (final childFolder in childFolders) {
+      final childDriveFolderId = await _uploadIndividualFolder(childFolder, driveFolderId);
+      if (childDriveFolderId != null) {
+        await _grantWritePermission(childDriveFolderId, email);
+        
+        final collaborators = List<String>.from(childFolder.collaborators);
+        if (!collaborators.contains(email)) collaborators.add(email);
+        await noteRepository.updateFolderCollaborators(
+            childFolder.id!, collaborators, List<String>.from(childFolder.adminEmails));
+
+        await noteRepository.updateItemSharedStatus(
+            childFolder.id!, true, isShared: true, driveFileId: childDriveFolderId);
+        
+        await _syncCollaborationMetadata(childFolder.id!, true);
+
+        // Recurse
+        await _recursivelyShareChildren(childFolder.id!, childDriveFolderId, email);
+      }
+    }
   }
 
   // ─── Internal ────────────────────────────────────────────────────────────

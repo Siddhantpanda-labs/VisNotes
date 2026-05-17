@@ -139,25 +139,50 @@ class _DropdownHeader extends StatelessWidget {
               style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
             ),
           ),
-          if (!isCurrentUserOwner)
-            TextButton.icon(
-              onPressed: () => _confirmLeave(context),
-              icon: const Icon(Icons.exit_to_app, size: 16, color: Color(0xFFE05C5C)),
-              label: const Text(
-                'Leave',
-                style: TextStyle(color: Color(0xFFE05C5C), fontSize: 13),
-              ),
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
+          TextButton.icon(
+            onPressed: () => _confirmLeave(context),
+            icon: const Icon(Icons.exit_to_app, size: 16, color: Color(0xFFE05C5C)),
+            label: const Text(
+              'Leave',
+              style: TextStyle(color: Color(0xFFE05C5C), fontSize: 13),
             ),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
         ],
       ),
     );
   }
 
   void _confirmLeave(BuildContext context) {
+    if (isCurrentUserOwner) {
+      showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+          actionsPadding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+          title: const Text('Cannot Leave', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+          content: const Text(
+            'You are the owner of this item.\nPlease transfer ownership to another admin before leaving.',
+            style: TextStyle(fontSize: 13, color: Colors.black87),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('OK', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF6C63FF))),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     final bloc = context.read<CollaborationBloc>();
     showDialog<void>(
       context: context,
@@ -170,7 +195,7 @@ class _DropdownHeader extends StatelessWidget {
         actionsPadding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
         title: const Text('Leave item?', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
         content: const Text(
-          'You will lose access to this item.',
+          'You will no longer receive updates for this item. A local copy will be saved.',
           style: TextStyle(fontSize: 13, color: Colors.black87),
         ),
         actions: [
@@ -477,7 +502,7 @@ class _ContextMenu extends StatelessWidget {
         actionsPadding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
         title: Text('Remove ${profile.displayName}?', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
         content: const Text(
-          'They will lose access to this item.',
+          'They will no longer receive updates. A personal local copy will remain on their device.',
           style: TextStyle(fontSize: 13, color: Colors.black87),
         ),
         actions: [
