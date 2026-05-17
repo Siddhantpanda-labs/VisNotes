@@ -514,6 +514,7 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     final newNote = IsarNoteDocument()
       ..id = DateTime.now().millisecondsSinceEpoch.toString()
       ..title = event.type == 'vector' ? "Vector Note" : "Text Note"
+      ..noteType = event.type
       ..dashboardX = event.x
       ..dashboardY = event.y
       ..createdAt = DateTime.now()

@@ -16,6 +16,7 @@ class NoteMapper {
     isar.createdAt = domain.createdAt;
     isar.updatedAt = domain.updatedAt;
     isar.parentFolderId = domain.parentFolderId;
+    isar.noteType = domain.noteType;
     isar.pages = domain.pages.map((p) => _toIsarPage(p)).toList();
     // Metadata fields (isPinned, tags, excludeFromBackup, dashboardX/Y)
     // are only set if we're creating a new record (existing == null).
@@ -29,6 +30,7 @@ class NoteMapper {
       createdAt: isar.createdAt ?? DateTime.now(),
       updatedAt: isar.updatedAt ?? DateTime.now(),
       parentFolderId: isar.parentFolderId,
+      noteType: isar.noteType,
       pages: isar.pages.map((p) => _toDomainPage(p)).toList(),
     );
   }

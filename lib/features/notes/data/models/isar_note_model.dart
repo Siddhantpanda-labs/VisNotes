@@ -34,6 +34,8 @@ class IsarNoteDocument {
   
   List<String> tags = [];
   
+  String noteType = 'text'; // 'text' or 'vector'
+  
   List<IsarNotePage> pages = [];
 }
 

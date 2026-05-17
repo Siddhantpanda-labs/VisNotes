@@ -531,7 +531,9 @@ class CloudSyncRepository {
       final ownerEmail = isFolder
           ? (item as IsarFolder).ownerEmail
           : (item as IsarNoteDocument).ownerEmail;
-      if (ownerEmail != currentUserEmail) {
+      // null ownerEmail means it was created locally — current user is the implicit owner
+      final effectiveOwner = ownerEmail ?? currentUserEmail;
+      if (effectiveOwner != currentUserEmail) {
         return CollaborationFailure('Only the owner can transfer ownership.');
       }
 
@@ -546,27 +548,11 @@ class CloudSyncRepository {
         return CollaborationFailure('$newOwnerEmail must be a collaborator first.');
       }
 
-      // Find the permissionId for the new owner
-      final driveApi = await _getDriveApi();
-      final perms = await driveApi.permissions.list(
-        driveFileId,
-        $fields: 'permissions(id, emailAddress)',
-      );
-      final targetPerm = perms.permissions?.firstWhere(
-        (p) => p.emailAddress == newOwnerEmail,
-        orElse: () => drive.Permission(),
-      );
-      if (targetPerm?.id == null) {
-        return CollaborationFailure('Could not find Drive permission for $newOwnerEmail.');
-      }
-
-      // Transfer ownership via Drive API
-      await driveApi.permissions.update(
-        drive.Permission()..role = 'owner',
-        driveFileId,
-        targetPerm!.id!,
-        transferOwnership: true,
-      );
+      // NOTE: Google Drive API does not allow programmatic ownership transfer on
+      // consumer accounts (returns 403 "Consent required"). VisNotes treats
+      // ownership as an app-level concept stored in the JSON metadata.
+      // We simply update ownerEmail in the local DB and sync that to Drive —
+      // both parties retain their existing Drive write permissions.
 
       // Update local metadata: new owner replaces old, old owner becomes collaborator
       collaborators.remove(newOwnerEmail);

@@ -3,6 +3,7 @@ import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/isar_note_model.dart';
 import '../models/app_settings_model.dart';
+import '../models/isar_vector_note_model.dart';
 
 class NoteRepository {
   late Future<Isar> db;
@@ -23,6 +24,7 @@ class NoteRepository {
           IsarTagSchema, 
           IsarUserSettingsSchema,
           IsarAppSettingsSchema,
+          IsarVectorNoteDocumentSchema,
         ],
         directory: dir.path,
         inspector: true,

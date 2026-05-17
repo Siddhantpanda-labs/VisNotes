@@ -87,34 +87,39 @@ const IsarNoteDocumentSchema = CollectionSchema(
       name: r'lastEditedBy',
       type: IsarType.string,
     ),
-    r'ownerEmail': PropertySchema(
+    r'noteType': PropertySchema(
       id: 14,
+      name: r'noteType',
+      type: IsarType.string,
+    ),
+    r'ownerEmail': PropertySchema(
+      id: 15,
       name: r'ownerEmail',
       type: IsarType.string,
     ),
     r'pages': PropertySchema(
-      id: 15,
+      id: 16,
       name: r'pages',
       type: IsarType.objectList,
       target: r'IsarNotePage',
     ),
     r'parentFolderId': PropertySchema(
-      id: 16,
+      id: 17,
       name: r'parentFolderId',
       type: IsarType.string,
     ),
     r'tags': PropertySchema(
-      id: 17,
+      id: 18,
       name: r'tags',
       type: IsarType.stringList,
     ),
     r'title': PropertySchema(
-      id: 18,
+      id: 19,
       name: r'title',
       type: IsarType.string,
     ),
     r'updatedAt': PropertySchema(
-      id: 19,
+      id: 20,
       name: r'updatedAt',
       type: IsarType.dateTime,
     )
@@ -192,6 +197,7 @@ int _isarNoteDocumentEstimateSize(
       bytesCount += 3 + value.length * 3;
     }
   }
+  bytesCount += 3 + object.noteType.length * 3;
   {
     final value = object.ownerEmail;
     if (value != null) {
@@ -248,17 +254,18 @@ void _isarNoteDocumentSerialize(
   writer.writeBool(offsets[11], object.isPinned);
   writer.writeBool(offsets[12], object.isShared);
   writer.writeString(offsets[13], object.lastEditedBy);
-  writer.writeString(offsets[14], object.ownerEmail);
+  writer.writeString(offsets[14], object.noteType);
+  writer.writeString(offsets[15], object.ownerEmail);
   writer.writeObjectList<IsarNotePage>(
-    offsets[15],
+    offsets[16],
     allOffsets,
     IsarNotePageSchema.serialize,
     object.pages,
   );
-  writer.writeString(offsets[16], object.parentFolderId);
-  writer.writeStringList(offsets[17], object.tags);
-  writer.writeString(offsets[18], object.title);
-  writer.writeDateTime(offsets[19], object.updatedAt);
+  writer.writeString(offsets[17], object.parentFolderId);
+  writer.writeStringList(offsets[18], object.tags);
+  writer.writeString(offsets[19], object.title);
+  writer.writeDateTime(offsets[20], object.updatedAt);
 }
 
 IsarNoteDocument _isarNoteDocumentDeserialize(
@@ -283,18 +290,19 @@ IsarNoteDocument _isarNoteDocumentDeserialize(
   object.isShared = reader.readBool(offsets[12]);
   object.isarId = id;
   object.lastEditedBy = reader.readStringOrNull(offsets[13]);
-  object.ownerEmail = reader.readStringOrNull(offsets[14]);
+  object.noteType = reader.readString(offsets[14]);
+  object.ownerEmail = reader.readStringOrNull(offsets[15]);
   object.pages = reader.readObjectList<IsarNotePage>(
-        offsets[15],
+        offsets[16],
         IsarNotePageSchema.deserialize,
         allOffsets,
         IsarNotePage(),
       ) ??
       [];
-  object.parentFolderId = reader.readStringOrNull(offsets[16]);
-  object.tags = reader.readStringList(offsets[17]) ?? [];
-  object.title = reader.readStringOrNull(offsets[18]);
-  object.updatedAt = reader.readDateTimeOrNull(offsets[19]);
+  object.parentFolderId = reader.readStringOrNull(offsets[17]);
+  object.tags = reader.readStringList(offsets[18]) ?? [];
+  object.title = reader.readStringOrNull(offsets[19]);
+  object.updatedAt = reader.readDateTimeOrNull(offsets[20]);
   return object;
 }
 
@@ -334,8 +342,10 @@ P _isarNoteDocumentDeserializeProp<P>(
     case 13:
       return (reader.readStringOrNull(offset)) as P;
     case 14:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 15:
+      return (reader.readStringOrNull(offset)) as P;
+    case 16:
       return (reader.readObjectList<IsarNotePage>(
             offset,
             IsarNotePageSchema.deserialize,
@@ -343,13 +353,13 @@ P _isarNoteDocumentDeserializeProp<P>(
             IsarNotePage(),
           ) ??
           []) as P;
-    case 16:
-      return (reader.readStringOrNull(offset)) as P;
     case 17:
-      return (reader.readStringList(offset) ?? []) as P;
-    case 18:
       return (reader.readStringOrNull(offset)) as P;
+    case 18:
+      return (reader.readStringList(offset) ?? []) as P;
     case 19:
+      return (reader.readStringOrNull(offset)) as P;
+    case 20:
       return (reader.readDateTimeOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -1872,6 +1882,142 @@ extension IsarNoteDocumentQueryFilter
   }
 
   QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      noteTypeEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'noteType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      noteTypeGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'noteType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      noteTypeLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'noteType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      noteTypeBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'noteType',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      noteTypeStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'noteType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      noteTypeEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'noteType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      noteTypeContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'noteType',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      noteTypeMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'noteType',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      noteTypeIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'noteType',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
+      noteTypeIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'noteType',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterFilterCondition>
       ownerEmailIsNull() {
     return QueryBuilder.apply(this, (query) {
       return query.addFilterCondition(const FilterCondition.isNull(
@@ -2905,6 +3051,20 @@ extension IsarNoteDocumentQuerySortBy
   }
 
   QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      sortByNoteType() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'noteType', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      sortByNoteTypeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'noteType', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
       sortByOwnerEmail() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'ownerEmail', Sort.asc);
@@ -3144,6 +3304,20 @@ extension IsarNoteDocumentQuerySortThenBy
   }
 
   QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      thenByNoteType() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'noteType', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
+      thenByNoteTypeDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'noteType', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QAfterSortBy>
       thenByOwnerEmail() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'ownerEmail', Sort.asc);
@@ -3300,6 +3474,13 @@ extension IsarNoteDocumentQueryWhereDistinct
   }
 
   QueryBuilder<IsarNoteDocument, IsarNoteDocument, QDistinct>
+      distinctByNoteType({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'noteType', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, IsarNoteDocument, QDistinct>
       distinctByOwnerEmail({bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'ownerEmail', caseSensitive: caseSensitive);
@@ -3433,6 +3614,12 @@ extension IsarNoteDocumentQueryProperty
       lastEditedByProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'lastEditedBy');
+    });
+  }
+
+  QueryBuilder<IsarNoteDocument, String, QQueryOperations> noteTypeProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'noteType');
     });
   }
 

@@ -5,6 +5,7 @@ import '../../../data/models/isar_note_model.dart';
 import '../../../data/mappers/note_mapper.dart';
 import '../../bloc/dashboard/dashboard_bloc.dart';
 import '../../pages/note_editor_page.dart';
+import '../../pages/vector_editor_page.dart';
 
 class ExplorerPanel extends StatelessWidget {
   final VoidCallback onClose;
@@ -141,14 +142,35 @@ class ExplorerNoteTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isVector = note.noteType == 'vector';
     return ListTile(
       contentPadding: EdgeInsets.only(left: 16.0 + (depth * 20.0), right: 16.0),
-      leading: const Icon(Icons.note_alt_outlined, size: 20, color: Colors.blueAccent),
+      leading: Icon(
+        isVector ? Icons.gesture_rounded : Icons.note_alt_outlined, 
+        size: 20, 
+        color: isVector ? const Color(0xFF6366F1) : Colors.blueAccent,
+      ),
       title: Text(
         note.title ?? 'Untitled Note',
         style: GoogleFonts.outfit(fontSize: 14),
       ),
       onTap: () {
+        if (isVector) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => VectorEditorPage(
+                noteId: note.id ?? '',
+                noteTitle: note.title ?? 'Vector Note',
+              ),
+            ),
+          ).then((_) {
+            if (context.mounted) {
+              context.read<DashboardBloc>().add(const LoadDashboard());
+            }
+          });
+          return;
+        }
+
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) => NoteEditorPage(
