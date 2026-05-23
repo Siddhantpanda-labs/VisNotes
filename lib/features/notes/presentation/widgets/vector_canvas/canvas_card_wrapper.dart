@@ -52,8 +52,8 @@ class _CanvasCardWrapperState extends State<CanvasCardWrapper> {
           // Body GestureDetector handles selections/double-taps in Edit mode
           Positioned.fill(
             child: GestureDetector(
-              onTap: widget.isEditable ? widget.onTap : null,
-              onDoubleTap: widget.isEditable ? widget.onDoubleTap : null,
+              onTap: (widget.isEditable && !widget.isEditing) ? widget.onTap : null,
+              onDoubleTap: (widget.isEditable && !widget.isEditing) ? widget.onDoubleTap : null,
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(elem is VectorTextElement ? 16 : 20),
@@ -154,8 +154,8 @@ class _CanvasCardWrapperState extends State<CanvasCardWrapper> {
               ),
             ),
 
-          // C. Draggable Corner Resize Handle (Bottom-Right corner, visible when card is selected, editable, and NOT locked/editing)
-          if (widget.isSelected && widget.isEditable && !widget.isEditing && !elem.isLocked)
+          // C. Draggable Corner Resize Handle (Bottom-Right corner, visible when card is selected, editable, and NOT locked)
+          if (widget.isSelected && widget.isEditable && !elem.isLocked)
             Positioned(
               right: -10.0 / scale,
               bottom: -10.0 / scale,

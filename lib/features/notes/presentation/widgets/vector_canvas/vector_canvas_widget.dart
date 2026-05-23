@@ -29,7 +29,7 @@ class _VectorCanvasWidgetState extends State<VectorCanvasWidget> {
   // Track the text controller mapped by element ID
   final Map<String, TextEditingController> _textControllers = {};
   String? _editingElementId;
-  bool _isResizingOrEditingCard = false; // Lock panning/scaling while interacting with cards!
+  bool _isResizingOrMovingCard = false; // Lock panning/scaling while moving or resizing cards!
 
   @override
   void initState() {
@@ -85,8 +85,16 @@ class _VectorCanvasWidgetState extends State<VectorCanvasWidget> {
               constrained: false, // Ensures child Container retains its massive bounds!
               minScale: 0.1, // Zoom out to 10%
               maxScale: 10.0, // Infinite zoom depth (up to 1000%)
-              panEnabled: !isDrawingOrErasing && !_isResizingOrEditingCard, // Lock pan during card resizing/drawing
-              scaleEnabled: !isDrawingOrErasing && !_isResizingOrEditingCard, // Lock zoom during card resizing/drawing
+              panEnabled: !isDrawingOrErasing && !_isResizingOrMovingCard, // Lock pan during card resizing/drawing
+              scaleEnabled: !isDrawingOrErasing && !_isResizingOrMovingCard, // Lock zoom during card resizing/drawing
+              onInteractionStart: (details) {
+                if (_editingElementId != null) {
+                  setState(() {
+                    _editingElementId = null;
+                  });
+                  FocusScope.of(context).unfocus();
+                }
+              },
               child: Container(
                 width: _canvasWidth,
                 height: _canvasHeight,
@@ -143,7 +151,7 @@ class _VectorCanvasWidgetState extends State<VectorCanvasWidget> {
                           scale: _transformationController.value.getMaxScaleOnAxis(),
                           onResizeStateChanged: (val) {
                             setState(() {
-                              _isResizingOrEditingCard = val;
+                              _isResizingOrMovingCard = val;
                             });
                           },
                           onTap: () {
@@ -155,7 +163,6 @@ class _VectorCanvasWidgetState extends State<VectorCanvasWidget> {
                             if (state.activeTool == VectorTool.select) {
                               setState(() {
                                 _editingElementId = elem.id;
-                                _isResizingOrEditingCard = true; // Lock pan during typing focus
                               });
                             }
                           },
@@ -171,7 +178,6 @@ class _VectorCanvasWidgetState extends State<VectorCanvasWidget> {
                             onSubmitted: () {
                               setState(() {
                                 _editingElementId = null;
-                                _isResizingOrEditingCard = false; // Unlock pan
                               });
                             },
                           ),
@@ -185,7 +191,7 @@ class _VectorCanvasWidgetState extends State<VectorCanvasWidget> {
                           scale: _transformationController.value.getMaxScaleOnAxis(),
                           onResizeStateChanged: (val) {
                             setState(() {
-                              _isResizingOrEditingCard = val;
+                              _isResizingOrMovingCard = val;
                             });
                           },
                           onTap: () {
@@ -257,7 +263,6 @@ class _VectorCanvasWidgetState extends State<VectorCanvasWidget> {
       context.read<VectorEditorBloc>().add(const ChangeVectorTool(VectorTool.select));
       setState(() {
         _editingElementId = generatedId;
-        _isResizingOrEditingCard = true; // Lock pan during initial typing focus
       });
     } else if (state.activeTool == VectorTool.eraser) {
       context.read<VectorEditorBloc>().add(EraseAtVectorPosition(scenePos));
@@ -280,7 +285,7 @@ class _VectorCanvasWidgetState extends State<VectorCanvasWidget> {
         context.read<VectorEditorBloc>().add(const SelectElement(null));
         setState(() {
           _editingElementId = null;
-          _isResizingOrEditingCard = false; // Unlock panning
+          _isResizingOrMovingCard = false;
         });
       } else {
         context.read<VectorEditorBloc>().add(SelectElement(clickedNode.id));
@@ -523,7 +528,6 @@ class _VectorCanvasWidgetState extends State<VectorCanvasWidget> {
     context.read<VectorEditorBloc>().add(AddTextCard(scenePos, scale: scale, id: generatedId));
     setState(() {
       _editingElementId = generatedId;
-      _isResizingOrEditingCard = true; // Lock pan during initial typing focus
     });
   }
 
