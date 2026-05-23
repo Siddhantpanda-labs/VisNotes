@@ -140,6 +140,7 @@ class _VectorCanvasWidgetState extends State<VectorCanvasWidget> {
                           isSelected: isSelected,
                           isEditing: isEditing,
                           isEditable: state.activeTool == VectorTool.select,
+                          scale: _transformationController.value.getMaxScaleOnAxis(),
                           onResizeStateChanged: (val) {
                             setState(() {
                               _isResizingOrEditingCard = val;
@@ -181,6 +182,7 @@ class _VectorCanvasWidgetState extends State<VectorCanvasWidget> {
                           isSelected: isSelected,
                           isEditing: false,
                           isEditable: state.activeTool == VectorTool.select,
+                          scale: _transformationController.value.getMaxScaleOnAxis(),
                           onResizeStateChanged: (val) {
                             setState(() {
                               _isResizingOrEditingCard = val;
@@ -250,7 +252,8 @@ class _VectorCanvasWidgetState extends State<VectorCanvasWidget> {
           );
     } else if (state.activeTool == VectorTool.text) {
       final generatedId = const Uuid().v4();
-      context.read<VectorEditorBloc>().add(AddTextCard(scenePos, id: generatedId));
+      final scale = _transformationController.value.getMaxScaleOnAxis();
+      context.read<VectorEditorBloc>().add(AddTextCard(scenePos, scale: scale, id: generatedId));
       context.read<VectorEditorBloc>().add(const ChangeVectorTool(VectorTool.select));
       setState(() {
         _editingElementId = generatedId;
@@ -516,7 +519,8 @@ class _VectorCanvasWidgetState extends State<VectorCanvasWidget> {
 
   void _spawnTextboxAt(BuildContext context, Offset scenePos) {
     final generatedId = const Uuid().v4();
-    context.read<VectorEditorBloc>().add(AddTextCard(scenePos, id: generatedId));
+    final scale = _transformationController.value.getMaxScaleOnAxis();
+    context.read<VectorEditorBloc>().add(AddTextCard(scenePos, scale: scale, id: generatedId));
     setState(() {
       _editingElementId = generatedId;
       _isResizingOrEditingCard = true; // Lock pan during initial typing focus
@@ -533,10 +537,12 @@ class _VectorCanvasWidgetState extends State<VectorCanvasWidget> {
 
     if (result != null && result.files.single.path != null) {
       final path = result.files.single.path!;
+      final scale = _transformationController.value.getMaxScaleOnAxis();
       bloc.add(
         AddPhotoNode(
           canvasPosition: scenePos,
           filePath: path,
+          scale: scale,
         ),
       );
       messenger.showSnackBar(

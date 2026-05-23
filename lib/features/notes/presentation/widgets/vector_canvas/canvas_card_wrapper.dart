@@ -13,6 +13,7 @@ class CanvasCardWrapper extends StatefulWidget {
   final VoidCallback onDoubleTap;
   final ValueChanged<bool> onResizeStateChanged; // Notify parent when drag starts/ends to lock pan!
   final bool isEditable; // Secure interaction mode flag
+  final double scale; // Viewport scale to keep handles constant visual size
 
   const CanvasCardWrapper({
     super.key,
@@ -24,6 +25,7 @@ class CanvasCardWrapper extends StatefulWidget {
     required this.onDoubleTap,
     required this.onResizeStateChanged,
     required this.isEditable,
+    required this.scale,
   });
 
   @override
@@ -37,6 +39,7 @@ class _CanvasCardWrapperState extends State<CanvasCardWrapper> {
   Widget build(BuildContext context) {
     final elem = widget.element;
     final Size size = elem is VectorTextElement ? elem.size : (elem as VectorPhotoElement).size;
+    final double scale = widget.scale > 0 ? widget.scale : 1.0;
 
     return Positioned(
       left: elem.position.dx,
@@ -58,7 +61,7 @@ class _CanvasCardWrapperState extends State<CanvasCardWrapper> {
                     color: widget.isSelected && widget.isEditable
                         ? (elem.isLocked ? const Color(0xFFEF4444) : const Color(0xFF6366F1))
                         : Colors.transparent,
-                    width: widget.isSelected && widget.isEditable ? 2.0 : 0.0,
+                    width: widget.isSelected && widget.isEditable ? 2.0 / scale : 0.0,
                   ),
                 ),
                 child: widget.child,
@@ -69,8 +72,8 @@ class _CanvasCardWrapperState extends State<CanvasCardWrapper> {
           // A. Lock Toggle Button (Top-Right edge of card overlay, visible when card is selected and editable)
           if (widget.isSelected && widget.isEditable)
             Positioned(
-              right: -10,
-              top: -14,
+              right: -10.0 / scale,
+              top: -14.0 / scale,
               child: GestureDetector(
                 onTap: () {
                   context.read<VectorEditorBloc>().add(ToggleLockElement(elem.id));
@@ -78,23 +81,23 @@ class _CanvasCardWrapperState extends State<CanvasCardWrapper> {
                 child: MouseRegion(
                   cursor: SystemMouseCursors.click,
                   child: Container(
-                    width: 28,
-                    height: 28,
+                    width: 28.0 / scale,
+                    height: 28.0 / scale,
                     decoration: BoxDecoration(
                       color: elem.isLocked ? const Color(0xFFEF4444) : const Color(0xFF6366F1),
                       shape: BoxShape.circle,
-                      boxShadow: const [
+                      boxShadow: [
                         BoxShadow(
                           color: Colors.black26,
-                          blurRadius: 4,
-                          offset: Offset(0, 2),
+                          blurRadius: 4.0 / scale,
+                          offset: Offset(0, 2.0 / scale),
                         )
                       ],
                     ),
                     child: Icon(
                       elem.isLocked ? Icons.lock_rounded : Icons.lock_open_rounded,
                       color: Colors.white,
-                      size: 14,
+                      size: 14.0 / scale,
                     ),
                   ),
                 ),
@@ -106,7 +109,7 @@ class _CanvasCardWrapperState extends State<CanvasCardWrapper> {
             Positioned(
               left: 0,
               right: 0,
-              top: -14,
+              top: -14.0 / scale,
               child: Center(
                 child: GestureDetector(
                   onPanStart: (_) {
@@ -125,24 +128,24 @@ class _CanvasCardWrapperState extends State<CanvasCardWrapper> {
                   child: MouseRegion(
                     cursor: SystemMouseCursors.move,
                     child: Container(
-                      width: 28,
-                      height: 28,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF6366F1),
+                      width: 28.0 / scale,
+                      height: 28.0 / scale,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF6366F1),
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black26,
-                            blurRadius: 4,
-                            offset: Offset(0, 2),
+                            blurRadius: 4.0 / scale,
+                            offset: Offset(0, 2.0 / scale),
                           )
                         ],
                       ),
-                      child: const Center(
+                      child: Center(
                         child: Icon(
                           Icons.add_rounded,
                           color: Colors.white,
-                          size: 16,
+                          size: 16.0 / scale,
                         ),
                       ),
                     ),
@@ -154,16 +157,22 @@ class _CanvasCardWrapperState extends State<CanvasCardWrapper> {
           // C. Draggable Corner Resize Handle (Bottom-Right corner, visible when card is selected, editable, and NOT locked/editing)
           if (widget.isSelected && widget.isEditable && !widget.isEditing && !elem.isLocked)
             Positioned(
-              right: -10,
-              bottom: -10,
+              right: -10.0 / scale,
+              bottom: -10.0 / scale,
               child: GestureDetector(
                 onPanStart: (details) {
                   widget.onResizeStateChanged(true); // Lock panning!
                   _startSize = size;
                 },
                 onPanUpdate: (details) {
-                  final double newWidth = (_startSize.width + details.localPosition.dx).clamp(100.0, 1000.0);
-                  final double newHeight = (_startSize.height + details.localPosition.dy).clamp(60.0, 1000.0);
+                  final double elementScale = elem.scale > 0 ? elem.scale : 1.0;
+                  final double minWidth = 100.0 / elementScale;
+                  final double maxWidth = 1000.0 / elementScale;
+                  final double minHeight = 60.0 / elementScale;
+                  final double maxHeight = 1000.0 / elementScale;
+
+                  final double newWidth = (_startSize.width + details.localPosition.dx).clamp(minWidth, maxWidth);
+                  final double newHeight = (_startSize.height + details.localPosition.dy).clamp(minHeight, maxHeight);
                   context.read<VectorEditorBloc>().add(
                         ResizeElement(elem.id, Size(newWidth, newHeight)),
                       );
@@ -177,24 +186,24 @@ class _CanvasCardWrapperState extends State<CanvasCardWrapper> {
                 child: MouseRegion(
                   cursor: SystemMouseCursors.resizeUpLeftDownRight,
                   child: Container(
-                    width: 22,
-                    height: 22,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF6366F1),
+                    width: 22.0 / scale,
+                    height: 22.0 / scale,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF6366F1),
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black26,
-                          blurRadius: 4,
-                          offset: Offset(0, 2),
+                          blurRadius: 4.0 / scale,
+                          offset: Offset(0, 2.0 / scale),
                         )
                       ],
                     ),
-                    child: const Center(
+                    child: Center(
                       child: Icon(
                         Icons.open_in_full_rounded,
                         color: Colors.white,
-                        size: 11,
+                        size: 11.0 / scale,
                       ),
                     ),
                   ),

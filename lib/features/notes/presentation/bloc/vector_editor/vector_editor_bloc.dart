@@ -200,14 +200,16 @@ class VectorEditorBloc extends Bloc<VectorEditorEvent, VectorEditorState> {
     final currentState = state as VectorEditorLoaded;
 
     final newId = event.id ?? _uuid.v4();
+    final scale = event.scale > 0 ? event.scale : 1.0;
     final newCard = VectorTextElement(
       id: newId,
       position: event.canvasPosition,
       text: '', // Empty text ready for initial cursor trigger
-      size: const Size(200, 80),
+      size: Size(200.0 / scale, 80.0 / scale),
       backgroundColorValue: 0xCCFFFFFF, // Glassmorphic white default
       textColorValue: 0xFF0F172A,
-      fontSize: 16.0,
+      fontSize: 16.0 / scale,
+      scale: scale,
     );
 
     final updatedElements = List<VectorElement>.from(currentState.document.elements)..add(newCard);
@@ -289,11 +291,13 @@ class VectorEditorBloc extends Bloc<VectorEditorEvent, VectorEditorState> {
     final currentState = state as VectorEditorLoaded;
 
     final newId = _uuid.v4();
+    final scale = event.scale > 0 ? event.scale : 1.0;
     final newPhoto = VectorPhotoElement(
       id: newId,
       position: event.canvasPosition,
       filePath: event.filePath,
-      size: const Size(260, 180), // Standard aspect ratio default
+      size: Size(260.0 / scale, 180.0 / scale), // Standard aspect ratio default
+      scale: scale,
     );
 
     final updatedElements = List<VectorElement>.from(currentState.document.elements)..add(newPhoto);

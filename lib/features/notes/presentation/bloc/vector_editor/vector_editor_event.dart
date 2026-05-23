@@ -54,11 +54,12 @@ class EraseAtVectorPosition extends VectorEditorEvent {
 
 class AddTextCard extends VectorEditorEvent {
   final Offset canvasPosition;
+  final double scale;
   final String? id;
-  const AddTextCard(this.canvasPosition, {this.id});
+  const AddTextCard(this.canvasPosition, {this.scale = 1.0, this.id});
 
   @override
-  List<Object?> get props => [canvasPosition, id];
+  List<Object?> get props => [canvasPosition, scale, id];
 }
 
 class UpdateTextCard extends VectorEditorEvent {
@@ -94,10 +95,11 @@ class MoveElement extends VectorEditorEvent {
 class AddPhotoNode extends VectorEditorEvent {
   final Offset canvasPosition;
   final String filePath;
-  const AddPhotoNode({required this.canvasPosition, required this.filePath});
+  final double scale;
+  const AddPhotoNode({required this.canvasPosition, required this.filePath, this.scale = 1.0});
 
   @override
-  List<Object?> get props => [canvasPosition, filePath];
+  List<Object?> get props => [canvasPosition, filePath, scale];
 }
 
 class EstablishConnection extends VectorEditorEvent {

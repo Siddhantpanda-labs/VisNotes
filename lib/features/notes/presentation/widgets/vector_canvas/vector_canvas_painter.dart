@@ -162,27 +162,36 @@ class VectorCanvasPainter extends CustomPainter {
   }
 
   void _paintSelectionRing(Canvas canvas, Offset pos, Size size) {
+    final double safeScale = scale > 0 ? scale : 1.0;
     final ringPaint = Paint()
       ..color = const Color(0xFF6366F1) // Indigo-500 selection theme
-      ..strokeWidth = 2.0
+      ..strokeWidth = 2.0 / safeScale
       ..style = PaintingStyle.stroke;
 
+    final double offset = 6.0 / safeScale;
     final rect = Rect.fromLTWH(
-      pos.dx - 6,
-      pos.dy - 6,
-      size.width + 12,
-      size.height + 12,
+      pos.dx - offset,
+      pos.dy - offset,
+      size.width + (offset * 2),
+      size.height + (offset * 2),
     );
 
     // Draw dashed selection rectangle with smooth rounded corners
-    _drawDashedRect(canvas, rect, ringPaint, radius: 12.0);
+    _drawDashedRect(
+      canvas,
+      rect,
+      ringPaint,
+      radius: 12.0 / safeScale,
+      dashLength: 6.0 / safeScale,
+      gapLength: 4.0 / safeScale,
+    );
 
     // Draw little accent resizing/editing grab anchors at the corners
     final fillPaint = Paint()
       ..color = const Color(0xFF6366F1)
       ..style = PaintingStyle.fill;
 
-    final double dotRadius = 4.0;
+    final double dotRadius = 4.0 / safeScale;
     canvas.drawCircle(rect.topLeft, dotRadius, fillPaint);
     canvas.drawCircle(rect.topRight, dotRadius, fillPaint);
     canvas.drawCircle(rect.bottomLeft, dotRadius, fillPaint);
@@ -222,14 +231,12 @@ class VectorCanvasPainter extends CustomPainter {
     }
   }
 
-  void _drawDashedRect(Canvas canvas, Rect rect, Paint paint, {double radius = 0.0}) {
+  void _drawDashedRect(Canvas canvas, Rect rect, Paint paint, {double radius = 0.0, double dashLength = 6.0, double gapLength = 4.0}) {
     final path = Path()
       ..addRRect(RRect.fromRectAndRadius(rect, Radius.circular(radius)));
 
     for (final contour in path.computeMetrics()) {
       double distance = 0.0;
-      const dashLength = 6.0;
-      const gapLength = 4.0;
 
       while (distance < contour.length) {
         final length = math.min(dashLength, contour.length - distance);
