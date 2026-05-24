@@ -25,6 +25,9 @@ class VectorEditorLoaded extends VectorEditorState {
   final Offset? connectorSourceAnchor;
   final Offset? connectorCurrentPoint;
 
+  // Hierarchical nesting active canvas root
+  final String? activeGroupId;
+
   const VectorEditorLoaded({
     required this.document,
     this.currentStroke,
@@ -34,6 +37,7 @@ class VectorEditorLoaded extends VectorEditorState {
     this.connectorSourceId,
     this.connectorSourceAnchor,
     this.connectorCurrentPoint,
+    this.activeGroupId,
   });
 
   VectorEditorLoaded copyWith({
@@ -52,6 +56,10 @@ class VectorEditorLoaded extends VectorEditorState {
     Offset? connectorSourceAnchor,
     Offset? connectorCurrentPoint,
     bool clearConnectorCurrent = false,
+
+    // Hierarchical nesting
+    String? activeGroupId,
+    bool clearActiveGroup = false,
   }) {
     return VectorEditorLoaded(
       document: document ?? this.document,
@@ -62,6 +70,7 @@ class VectorEditorLoaded extends VectorEditorState {
       connectorSourceId: clearConnectorSource ? null : (connectorSourceId ?? this.connectorSourceId),
       connectorSourceAnchor: clearConnectorSource ? null : (connectorSourceAnchor ?? this.connectorSourceAnchor),
       connectorCurrentPoint: clearConnectorCurrent ? null : (connectorCurrentPoint ?? this.connectorCurrentPoint),
+      activeGroupId: clearActiveGroup ? null : (activeGroupId ?? this.activeGroupId),
     );
   }
 
@@ -75,5 +84,6 @@ class VectorEditorLoaded extends VectorEditorState {
         connectorSourceId,
         connectorSourceAnchor,
         connectorCurrentPoint,
+        activeGroupId,
       ];
 }

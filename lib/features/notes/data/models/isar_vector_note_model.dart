@@ -36,13 +36,18 @@ class IsarVectorNoteDocument {
 class IsarVectorElement {
   String? id;
   
-  /// Type descriptor: 'stroke', 'text', 'photo', 'connector'
+  /// Type descriptor: 'stroke', 'text', 'photo', 'connector', 'group'
   String? type;
 
   double positionX = 0.0;
   double positionY = 0.0;
   double scale = 1.0;
   double rotation = 0.0;
+  String? parentGroupId;
+
+  // ── Group Fields ───────────────────────────────────────────────────────────
+  double groupWidth = 0.0;
+  double groupHeight = 0.0;
 
   // ── Stroke Fields ──────────────────────────────────────────────────────────
   List<IsarVectorPoint> strokePoints = [];

@@ -7,6 +7,7 @@ sealed class VectorElement {
   final double scale;
   final double rotation;
   final bool isLocked;
+  final String? parentGroupId;
 
   const VectorElement({
     required this.id,
@@ -14,6 +15,7 @@ sealed class VectorElement {
     this.scale = 1.0,
     this.rotation = 0.0,
     this.isLocked = false,
+    this.parentGroupId,
   });
 
   VectorElement copyWith({
@@ -22,6 +24,7 @@ sealed class VectorElement {
     double? scale,
     double? rotation,
     bool? isLocked,
+    String? parentGroupId,
   });
 }
 
@@ -42,6 +45,7 @@ class VectorStrokeElement extends VectorElement {
     super.scale = 1.0,
     super.rotation = 0.0,
     super.isLocked = false,
+    super.parentGroupId,
   });
 
   @override
@@ -51,6 +55,7 @@ class VectorStrokeElement extends VectorElement {
     double? scale,
     double? rotation,
     bool? isLocked,
+    String? parentGroupId,
     List<Offset>? points,
     List<double>? pressures,
     int? colorValue,
@@ -62,6 +67,7 @@ class VectorStrokeElement extends VectorElement {
       scale: scale ?? this.scale,
       rotation: rotation ?? this.rotation,
       isLocked: isLocked ?? this.isLocked,
+      parentGroupId: parentGroupId ?? this.parentGroupId,
       points: points ?? this.points,
       pressures: pressures ?? this.pressures,
       colorValue: colorValue ?? this.colorValue,
@@ -93,6 +99,7 @@ class VectorTextElement extends VectorElement {
     super.scale = 1.0,
     super.rotation = 0.0,
     super.isLocked = false,
+    super.parentGroupId,
   });
 
   @override
@@ -102,6 +109,7 @@ class VectorTextElement extends VectorElement {
     double? scale,
     double? rotation,
     bool? isLocked,
+    String? parentGroupId,
     String? text,
     Size? size,
     int? backgroundColorValue,
@@ -116,6 +124,7 @@ class VectorTextElement extends VectorElement {
       scale: scale ?? this.scale,
       rotation: rotation ?? this.rotation,
       isLocked: isLocked ?? this.isLocked,
+      parentGroupId: parentGroupId ?? this.parentGroupId,
       text: text ?? this.text,
       size: size ?? this.size,
       backgroundColorValue: backgroundColorValue ?? this.backgroundColorValue,
@@ -140,6 +149,7 @@ class VectorPhotoElement extends VectorElement {
     super.scale = 1.0,
     super.rotation = 0.0,
     super.isLocked = false,
+    super.parentGroupId,
   });
 
   @override
@@ -149,6 +159,7 @@ class VectorPhotoElement extends VectorElement {
     double? scale,
     double? rotation,
     bool? isLocked,
+    String? parentGroupId,
     String? filePath,
     Size? size,
   }) {
@@ -158,6 +169,7 @@ class VectorPhotoElement extends VectorElement {
       scale: scale ?? this.scale,
       rotation: rotation ?? this.rotation,
       isLocked: isLocked ?? this.isLocked,
+      parentGroupId: parentGroupId ?? this.parentGroupId,
       filePath: filePath ?? this.filePath,
       size: size ?? this.size,
     );
@@ -190,6 +202,7 @@ class VectorConnectorElement extends VectorElement {
     super.scale = 1.0,
     super.rotation = 0.0,
     super.isLocked = false,
+    super.parentGroupId,
   });
 
   @override
@@ -199,6 +212,7 @@ class VectorConnectorElement extends VectorElement {
     double? scale,
     double? rotation,
     bool? isLocked,
+    String? parentGroupId,
     String? sourceId,
     String? targetId,
     Offset? sourceAnchor,
@@ -213,6 +227,7 @@ class VectorConnectorElement extends VectorElement {
       scale: scale ?? this.scale,
       rotation: rotation ?? this.rotation,
       isLocked: isLocked ?? this.isLocked,
+      parentGroupId: parentGroupId ?? this.parentGroupId,
       sourceId: sourceId ?? this.sourceId,
       targetId: targetId ?? this.targetId,
       sourceAnchor: sourceAnchor ?? this.sourceAnchor,
@@ -220,6 +235,46 @@ class VectorConnectorElement extends VectorElement {
       colorValue: colorValue ?? this.colorValue,
       strokeWidth: strokeWidth ?? this.strokeWidth,
       isDashed: isDashed ?? this.isDashed,
+    );
+  }
+}
+
+/// Represents a nested coordinate canvas group containing other elements.
+class VectorCanvasGroup extends VectorElement {
+  final Size size;
+  final List<VectorElement> children;
+
+  const VectorCanvasGroup({
+    required super.id,
+    required super.position,
+    required this.size,
+    required this.children,
+    super.scale = 1.0,
+    super.rotation = 0.0,
+    super.isLocked = false,
+    super.parentGroupId,
+  });
+
+  @override
+  VectorCanvasGroup copyWith({
+    String? id,
+    Offset? position,
+    double? scale,
+    double? rotation,
+    bool? isLocked,
+    String? parentGroupId,
+    Size? size,
+    List<VectorElement>? children,
+  }) {
+    return VectorCanvasGroup(
+      id: id ?? this.id,
+      position: position ?? this.position,
+      scale: scale ?? this.scale,
+      rotation: rotation ?? this.rotation,
+      isLocked: isLocked ?? this.isLocked,
+      parentGroupId: parentGroupId ?? this.parentGroupId,
+      size: size ?? this.size,
+      children: children ?? this.children,
     );
   }
 }

@@ -6,10 +6,40 @@ import '../../../domain/entities/vector_canvas/vector_note_document.dart';
 class VectorNoteMapper {
   /// Translates an [IsarVectorNoteDocument] to a domain [VectorNoteDocument]
   static VectorNoteDocument toDomain(IsarVectorNoteDocument isarDoc) {
+    // 1. Map all flat Isar elements to domain objects
+    final allDomainElems = isarDoc.elements
+        .map(_elementToDomain)
+        .whereType<VectorElement>()
+        .toList();
+
+    // 2. Build map of parentId -> children
+    final Map<String, List<VectorElement>> childrenMap = {};
+    for (final elem in allDomainElems) {
+      if (elem.parentGroupId != null) {
+        childrenMap.putIfAbsent(elem.parentGroupId!, () => []).add(elem);
+      }
+    }
+
+    // 3. Recursive helper to populate group children
+    VectorElement populateChildren(VectorElement elem) {
+      if (elem is VectorCanvasGroup) {
+        final rawChildren = childrenMap[elem.id] ?? [];
+        final populatedChildren = rawChildren.map(populateChildren).toList();
+        return elem.copyWith(children: populatedChildren);
+      }
+      return elem;
+    }
+
+    // 4. Root elements are those with parentGroupId == null
+    final rootElements = allDomainElems
+        .where((e) => e.parentGroupId == null)
+        .map(populateChildren)
+        .toList();
+
     return VectorNoteDocument(
       id: isarDoc.id ?? '',
       title: isarDoc.title ?? '',
-      elements: isarDoc.elements.map(_elementToDomain).whereType<VectorElement>().toList(),
+      elements: rootElements,
       createdAt: isarDoc.createdAt ?? DateTime.now(),
       updatedAt: isarDoc.updatedAt ?? DateTime.now(),
       dashboardX: isarDoc.dashboardX,
@@ -32,7 +62,7 @@ class VectorNoteMapper {
     return IsarVectorNoteDocument()
       ..id = domainDoc.id
       ..title = domainDoc.title
-      ..elements = domainDoc.elements.map(_elementToIsar).toList()
+      ..elements = _flattenElements(domainDoc.elements, null)
       ..createdAt = domainDoc.createdAt
       ..updatedAt = domainDoc.updatedAt
       ..dashboardX = domainDoc.dashboardX
@@ -47,6 +77,24 @@ class VectorNoteMapper {
       ..isShared = domainDoc.isShared
       ..collaborators = List.from(domainDoc.collaborators)
       ..adminEmails = List.from(domainDoc.adminEmails);
+  }
+
+  /// Recursively flattens a nested domain elements tree into a list of Isar elements
+  static List<IsarVectorElement> _flattenElements(
+    List<VectorElement> domainElems,
+    String? parentGroupId,
+  ) {
+    final List<IsarVectorElement> isarElems = [];
+    for (final elem in domainElems) {
+      final isarElem = _elementToIsar(elem);
+      isarElem.parentGroupId = parentGroupId;
+      isarElems.add(isarElem);
+
+      if (elem is VectorCanvasGroup) {
+        isarElems.addAll(_flattenElements(elem.children, elem.id));
+      }
+    }
+    return isarElems;
   }
 
   // ── Element Mappers ────────────────────────────────────────────────────────
@@ -66,6 +114,7 @@ class VectorNoteMapper {
           scale: scale,
           rotation: rot,
           isLocked: isarElem.isLocked,
+          parentGroupId: isarElem.parentGroupId,
           points: isarElem.strokePoints.map((p) => Offset(p.x, p.y)).toList(),
           pressures: List.from(isarElem.pressures),
           colorValue: isarElem.strokeColorValue,
@@ -78,6 +127,7 @@ class VectorNoteMapper {
           scale: scale,
           rotation: rot,
           isLocked: isarElem.isLocked,
+          parentGroupId: isarElem.parentGroupId,
           text: isarElem.text ?? '',
           size: Size(isarElem.textSizeWidth, isarElem.textSizeHeight),
           backgroundColorValue: isarElem.textBgColorValue,
@@ -93,6 +143,7 @@ class VectorNoteMapper {
           scale: scale,
           rotation: rot,
           isLocked: isarElem.isLocked,
+          parentGroupId: isarElem.parentGroupId,
           filePath: isarElem.filePath ?? '',
           size: Size(isarElem.photoWidth, isarElem.photoHeight),
         );
@@ -103,6 +154,7 @@ class VectorNoteMapper {
           scale: scale,
           rotation: rot,
           isLocked: isarElem.isLocked,
+          parentGroupId: isarElem.parentGroupId,
           sourceId: isarElem.sourceId ?? '',
           targetId: isarElem.targetId ?? '',
           sourceAnchor: Offset(isarElem.sourceAnchorX, isarElem.sourceAnchorY),
@@ -110,6 +162,17 @@ class VectorNoteMapper {
           colorValue: isarElem.connectorColorValue,
           strokeWidth: isarElem.connectorStrokeWidth,
           isDashed: isarElem.isDashed,
+        );
+      case 'group':
+        return VectorCanvasGroup(
+          id: id,
+          position: pos,
+          scale: scale,
+          rotation: rot,
+          isLocked: isarElem.isLocked,
+          parentGroupId: isarElem.parentGroupId,
+          size: Size(isarElem.groupWidth, isarElem.groupHeight),
+          children: const [], // Populated recursively in toDomain
         );
       default:
         return null;
@@ -123,7 +186,8 @@ class VectorNoteMapper {
       ..positionY = domainElem.position.dy
       ..scale = domainElem.scale
       ..rotation = domainElem.rotation
-      ..isLocked = domainElem.isLocked;
+      ..isLocked = domainElem.isLocked
+      ..parentGroupId = domainElem.parentGroupId;
 
     switch (domainElem) {
       case VectorStrokeElement stroke:
@@ -161,6 +225,11 @@ class VectorNoteMapper {
         isar.connectorColorValue = connector.colorValue;
         isar.connectorStrokeWidth = connector.strokeWidth;
         isar.isDashed = connector.isDashed;
+        break;
+      case VectorCanvasGroup group:
+        isar.type = 'group';
+        isar.groupWidth = group.size.width;
+        isar.groupHeight = group.size.height;
         break;
     }
     return isar;

@@ -163,3 +163,21 @@ class ToggleLockElement extends VectorEditorEvent {
   @override
   List<Object?> get props => [id];
 }
+
+class ChangeActiveGroup extends VectorEditorEvent {
+  final String? activeGroupId;
+  const ChangeActiveGroup(this.activeGroupId);
+
+  @override
+  List<Object?> get props => [activeGroupId];
+}
+
+class AddCanvasGroup extends VectorEditorEvent {
+  final Offset canvasPosition;
+  final double scale;
+  final String? id;
+  const AddCanvasGroup(this.canvasPosition, {this.scale = 1.0, this.id});
+
+  @override
+  List<Object?> get props => [canvasPosition, scale, id];
+}

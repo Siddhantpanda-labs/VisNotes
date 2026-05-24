@@ -38,7 +38,16 @@ class _CanvasCardWrapperState extends State<CanvasCardWrapper> {
   @override
   Widget build(BuildContext context) {
     final elem = widget.element;
-    final Size size = elem is VectorTextElement ? elem.size : (elem as VectorPhotoElement).size;
+    final Size size;
+    if (elem is VectorTextElement) {
+      size = elem.size;
+    } else if (elem is VectorPhotoElement) {
+      size = elem.size;
+    } else if (elem is VectorCanvasGroup) {
+      size = elem.size;
+    } else {
+      size = Size.zero;
+    }
     final double scale = widget.scale > 0 ? widget.scale : 1.0;
 
     return Positioned(

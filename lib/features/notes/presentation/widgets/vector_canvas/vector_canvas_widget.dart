@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -31,6 +33,9 @@ class _VectorCanvasWidgetState extends State<VectorCanvasWidget> {
   String? _editingElementId;
   bool _isResizingOrMovingCard = false; // Lock panning/scaling while moving or resizing cards!
 
+  // Image caching
+  final Map<String, ui.Image> _imageCache = {};
+
   @override
   void initState() {
     super.initState();
@@ -58,6 +63,105 @@ class _VectorCanvasWidgetState extends State<VectorCanvasWidget> {
     setState(() {
       _zoomPercentage = scale * 100.0;
     });
+
+    final blocState = context.read<VectorEditorBloc>().state;
+    if (blocState is! VectorEditorLoaded) return;
+
+    final doc = blocState.document;
+    final activeGroupId = blocState.activeGroupId;
+    final viewSize = MediaQuery.of(context).size;
+
+    // Viewport center in scene coordinates
+    final Offset centerScene = _transformationController.toScene(
+      Offset(viewSize.width / 2, viewSize.height / 2),
+    );
+
+    // Zoom Threshold Hysteresis
+    if (scale > 5.0) {
+      // Zooming In: Frame-Shift Focus to Nested Sub-Canvas Group
+      final activeLevelElements = activeGroupId == null
+          ? doc.elements
+          : (_findElementById(activeGroupId, doc.elements) as VectorCanvasGroup?)?.children ?? [];
+
+      final targetGroup = _findGroupAt(centerScene, activeLevelElements);
+      if (targetGroup != null) {
+        _frameShiftIn(targetGroup, scale);
+      }
+    } else if (scale < 0.2 && activeGroupId != null) {
+      // Zooming Out: Frame-Shift Focus Back to Parent Group
+      final currentGroup = _findElementById(activeGroupId, doc.elements) as VectorCanvasGroup?;
+      if (currentGroup != null) {
+        final parentGroup = _findParentGroupOf(activeGroupId, doc.elements);
+        _frameShiftOut(currentGroup, parentGroup, scale);
+      }
+    }
+  }
+
+  void _frameShiftIn(VectorCanvasGroup targetGroup, double oldScale) {
+    final matrix = _transformationController.value;
+    final Offset groupOriginScreen = MatrixUtils.transformPoint(matrix, targetGroup.position);
+
+    final double newScale = oldScale * targetGroup.scale;
+    final double newTx = groupOriginScreen.dx;
+    final double newTy = groupOriginScreen.dy;
+
+    final newMatrix = Matrix4.identity()
+      ..translate(newTx, newTy)
+      ..scale(newScale);
+
+    _transformationController.removeListener(_onTransformationChanged);
+    _transformationController.value = newMatrix;
+    _transformationController.addListener(_onTransformationChanged);
+
+    context.read<VectorEditorBloc>().add(ChangeActiveGroup(targetGroup.id));
+  }
+
+  void _frameShiftOut(VectorCanvasGroup currentGroup, VectorCanvasGroup? parentGroup, double oldScale) {
+    final matrix = _transformationController.value;
+    final Offset cOriginScreen = MatrixUtils.transformPoint(matrix, Offset.zero);
+
+    final double newScale = oldScale / currentGroup.scale;
+    final double newTx = cOriginScreen.dx - newScale * currentGroup.position.dx;
+    final double newTy = cOriginScreen.dy - newScale * currentGroup.position.dy;
+
+    final newMatrix = Matrix4.identity()
+      ..translate(newTx, newTy)
+      ..scale(newScale);
+
+    _transformationController.removeListener(_onTransformationChanged);
+    _transformationController.value = newMatrix;
+    _transformationController.addListener(_onTransformationChanged);
+
+    context.read<VectorEditorBloc>().add(ChangeActiveGroup(parentGroup?.id));
+  }
+
+  void _preloadImages(List<VectorElement> elements) {
+    for (final elem in elements) {
+      if (elem is VectorPhotoElement) {
+        if (!_imageCache.containsKey(elem.filePath)) {
+          _loadImage(elem.filePath);
+        }
+      } else if (elem is VectorCanvasGroup) {
+        _preloadImages(elem.children);
+      }
+    }
+  }
+
+  Future<void> _loadImage(String filePath) async {
+    try {
+      final file = File(filePath);
+      if (!await file.exists()) return;
+      final bytes = await file.readAsBytes();
+      final codec = await ui.instantiateImageCodec(bytes);
+      final frameInfo = await codec.getNextFrame();
+      if (mounted) {
+        setState(() {
+          _imageCache[filePath] = frameInfo.image;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error preloading image $filePath: $e');
+    }
   }
 
   @override
@@ -76,6 +180,23 @@ class _VectorCanvasWidgetState extends State<VectorCanvasWidget> {
             state.activeTool == VectorTool.eraser ||
             state.activeTool == VectorTool.connector;
 
+        // Trigger preloading images
+        _preloadImages(elements);
+
+        // Viewport rect calculation in scene coordinates
+        final matrix = _transformationController.value;
+        final double currentScale = matrix.getMaxScaleOnAxis();
+        final double tx = matrix.entry(0, 3);
+        final double ty = matrix.entry(1, 3);
+        final Size viewSize = MediaQuery.of(context).size;
+
+        final Rect viewportRect = Rect.fromLTWH(
+          -tx / currentScale,
+          -ty / currentScale,
+          viewSize.width / currentScale,
+          viewSize.height / currentScale,
+        );
+
         return Stack(
           children: [
             // 1. The Zoomable Infinite Viewport
@@ -83,8 +204,8 @@ class _VectorCanvasWidgetState extends State<VectorCanvasWidget> {
               transformationController: _transformationController,
               boundaryMargin: EdgeInsets.zero, // Prevent camera from moving beyond canvas borders!
               constrained: false, // Ensures child Container retains its massive bounds!
-              minScale: 0.1, // Zoom out to 10%
-              maxScale: 10.0, // Infinite zoom depth (up to 1000%)
+              minScale: 0.01, // Zoom out to 1% (infinite scale room)
+              maxScale: 100.0, // Zoom in to 10000%
               panEnabled: !isDrawingOrErasing && !_isResizingOrMovingCard, // Lock pan during card resizing/drawing
               scaleEnabled: !isDrawingOrErasing && !_isResizingOrMovingCard, // Lock zoom during card resizing/drawing
               onInteractionStart: (details) {
@@ -123,88 +244,117 @@ class _VectorCanvasWidgetState extends State<VectorCanvasWidget> {
                             size: Size(_canvasWidth, _canvasHeight),
                             painter: VectorCanvasPainter(
                               elements: elements,
-                              scale: _transformationController.value.getMaxScaleOnAxis(),
+                              scale: currentScale,
+                              viewportRect: viewportRect,
+                              imageCache: _imageCache,
                               currentStroke: state.currentStroke,
                               selectedElementId: state.selectedElementId,
+                              editingElementId: _editingElementId,
                             ),
                           ),
                         ),
                       ),
                     ),
 
-                    // B. Interactive Cards (Floating text cards, Photo nodes wrapped in unified draggable wrappers)
-                    ...elements.map((elem) {
-                      final isSelected = state.selectedElementId == elem.id;
+                    // B. Interactive Card Overlay - ONLY overlay the single selected element to enable editing!
+                    ...(() {
+                      if (state.selectedElementId == null) return <Widget>[];
+
+                      final elem = _findElementById(state.selectedElementId!, elements);
+                      if (elem == null) return <Widget>[];
+
                       final isEditing = _editingElementId == elem.id;
 
-                      if (elem is VectorTextElement) {
+                      // Map to absolute coordinates for standard Stack positioning
+                      final absoluteElem = _toAbsoluteElement(elem, elements);
+
+                      if (absoluteElem is VectorTextElement) {
                         if (!_textControllers.containsKey(elem.id)) {
-                          _textControllers[elem.id] = TextEditingController(text: elem.text);
+                          _textControllers[elem.id] = TextEditingController(text: absoluteElem.text);
                         }
                         final controller = _textControllers[elem.id]!;
 
-                        return CanvasCardWrapper(
-                          element: elem,
-                          isSelected: isSelected,
-                          isEditing: isEditing,
-                          isEditable: state.activeTool == VectorTool.select,
-                          scale: _transformationController.value.getMaxScaleOnAxis(),
-                          onResizeStateChanged: (val) {
-                            setState(() {
-                              _isResizingOrMovingCard = val;
-                            });
-                          },
-                          onTap: () {
-                            if (state.activeTool == VectorTool.select) {
-                              context.read<VectorEditorBloc>().add(SelectElement(elem.id));
-                            }
-                          },
-                          onDoubleTap: () {
-                            if (state.activeTool == VectorTool.select) {
-                              setState(() {
-                                _editingElementId = elem.id;
-                              });
-                            }
-                          },
-                          child: CanvasTextCard(
-                            elem: elem,
+                        return [
+                          CanvasCardWrapper(
+                            element: absoluteElem,
+                            isSelected: true,
                             isEditing: isEditing,
-                            controller: controller,
-                            onChanged: (val) {
-                              context.read<VectorEditorBloc>().add(
-                                    UpdateTextCard(id: elem.id, content: val),
-                                  );
-                            },
-                            onSubmitted: () {
+                            isEditable: state.activeTool == VectorTool.select,
+                            scale: currentScale,
+                            onResizeStateChanged: (val) {
                               setState(() {
-                                _editingElementId = null;
+                                _isResizingOrMovingCard = val;
                               });
                             },
-                          ),
-                        );
-                      } else if (elem is VectorPhotoElement) {
-                        return CanvasCardWrapper(
-                          element: elem,
-                          isSelected: isSelected,
-                          isEditing: false,
-                          isEditable: state.activeTool == VectorTool.select,
-                          scale: _transformationController.value.getMaxScaleOnAxis(),
-                          onResizeStateChanged: (val) {
-                            setState(() {
-                              _isResizingOrMovingCard = val;
-                            });
-                          },
-                          onTap: () {
-                            if (state.activeTool == VectorTool.select) {
-                              context.read<VectorEditorBloc>().add(SelectElement(elem.id));
-                            }
-                          },
-                          onDoubleTap: () {},
-                          child: CanvasPhotoCard(elem: elem),
-                        );
+                            onTap: () {},
+                            onDoubleTap: () {
+                              if (state.activeTool == VectorTool.select) {
+                                setState(() {
+                                  _editingElementId = elem.id;
+                                });
+                              }
+                            },
+                            child: CanvasTextCard(
+                              elem: absoluteElem,
+                              isEditing: isEditing,
+                              controller: controller,
+                              onChanged: (val) {
+                                context.read<VectorEditorBloc>().add(
+                                      UpdateTextCard(id: elem.id, content: val),
+                                    );
+                              },
+                              onSubmitted: () {
+                                setState(() {
+                                  _editingElementId = null;
+                                });
+                              },
+                            ),
+                          )
+                        ];
+                      } else if (absoluteElem is VectorPhotoElement) {
+                        return [
+                          CanvasCardWrapper(
+                            element: absoluteElem,
+                            isSelected: true,
+                            isEditing: false,
+                            isEditable: state.activeTool == VectorTool.select,
+                            scale: currentScale,
+                            onResizeStateChanged: (val) {
+                              setState(() {
+                                _isResizingOrMovingCard = val;
+                              });
+                            },
+                            onTap: () {},
+                            onDoubleTap: () {},
+                            child: CanvasPhotoCard(elem: absoluteElem),
+                          )
+                        ];
+                      } else if (absoluteElem is VectorCanvasGroup) {
+                        return [
+                          CanvasCardWrapper(
+                            element: absoluteElem,
+                            isSelected: true,
+                            isEditing: false,
+                            isEditable: state.activeTool == VectorTool.select,
+                            scale: currentScale,
+                            onResizeStateChanged: (val) {
+                              setState(() {
+                                _isResizingOrMovingCard = val;
+                              });
+                            },
+                            onTap: () {},
+                            onDoubleTap: () {},
+                            child: Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(color: const Color(0xFF6366F1), width: 2.0 / currentScale),
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                            ),
+                          )
+                        ];
                       }
-                      return const SizedBox.shrink();
-                    }),
+                      return <Widget>[];
+                    })(),
                   ],
                 ),
               ),
@@ -267,8 +417,7 @@ class _VectorCanvasWidgetState extends State<VectorCanvasWidget> {
     } else if (state.activeTool == VectorTool.eraser) {
       context.read<VectorEditorBloc>().add(EraseAtVectorPosition(scenePos));
     } else if (state.activeTool == VectorTool.connector) {
-      // Check if clicked inside a node to initiate rubber-band connect
-      final clickedNode = _getNodeAtPosition(scenePos, state.document.elements);
+      final clickedNode = _getNodeAtPositionRecursive(scenePos, state.document.elements);
       if (clickedNode != null) {
         context.read<VectorEditorBloc>().add(ChangeVectorTool(VectorTool.select)); // Reset
         ScaffoldMessenger.of(context).showSnackBar(
@@ -280,7 +429,7 @@ class _VectorCanvasWidgetState extends State<VectorCanvasWidget> {
       }
     } else if (state.activeTool == VectorTool.select) {
       // Clear selection if tapping blank canvas area
-      final clickedNode = _getNodeAtPosition(scenePos, state.document.elements);
+      final clickedNode = _getNodeAtPositionRecursive(scenePos, state.document.elements);
       if (clickedNode == null) {
         context.read<VectorEditorBloc>().add(const SelectElement(null));
         setState(() {
@@ -311,14 +460,21 @@ class _VectorCanvasWidgetState extends State<VectorCanvasWidget> {
     }
   }
 
-  VectorElement? _getNodeAtPosition(Offset pos, List<VectorElement> elements) {
-    for (final elem in elements.reversed) {
-      if (elem is VectorTextElement) {
+  VectorElement? _getNodeAtPositionRecursive(Offset localPos, List<VectorElement> tree) {
+    for (final elem in tree.reversed) {
+      if (elem is VectorCanvasGroup) {
+        final childPos = (localPos - elem.position) / elem.scale;
+        final clickedChild = _getNodeAtPositionRecursive(childPos, elem.children);
+        if (clickedChild != null) return clickedChild;
+
         final rect = Rect.fromLTWH(elem.position.dx, elem.position.dy, elem.size.width, elem.size.height);
-        if (rect.contains(pos)) return elem;
+        if (rect.contains(localPos)) return elem;
+      } else if (elem is VectorTextElement) {
+        final rect = Rect.fromLTWH(elem.position.dx, elem.position.dy, elem.size.width, elem.size.height);
+        if (rect.contains(localPos)) return elem;
       } else if (elem is VectorPhotoElement) {
         final rect = Rect.fromLTWH(elem.position.dx, elem.position.dy, elem.size.width, elem.size.height);
-        if (rect.contains(pos)) return elem;
+        if (rect.contains(localPos)) return elem;
       }
     }
     return null;
@@ -327,21 +483,14 @@ class _VectorCanvasWidgetState extends State<VectorCanvasWidget> {
   // Floating Context Tooltip projection directly above selected node
   Widget _buildFloatingContextTooltip(BuildContext context, VectorEditorLoaded state) {
     final selectedId = state.selectedElementId!;
-    final elem = state.document.elements.firstWhere((e) => e.id == selectedId,
-        orElse: () => const VectorStrokeElement(
-              id: '',
-              position: Offset.zero,
-              points: [],
-              pressures: [],
-              colorValue: 0,
-              strokeWidth: 0,
-            ));
+    final doc = state.document;
+    final elem = _findElementById(selectedId, doc.elements);
 
-    if (elem.id.isEmpty) return const SizedBox.shrink();
+    if (elem == null) return const SizedBox.shrink();
 
-    // Map canvas coordinates to viewport screen space coordinates
-    final Offset canvasAnchor = elem.position;
-    final Offset screenAnchor = MatrixUtils.transformPoint(_transformationController.value, canvasAnchor);
+    // Map local coordinates to viewport screen space coordinates
+    final Offset absolutePos = _getElementAbsolutePosition(elem, doc.elements);
+    final Offset screenAnchor = MatrixUtils.transformPoint(_transformationController.value, absolutePos);
 
     return Positioned(
       left: screenAnchor.dx - 100, // Offset horizontally to center tooltip
@@ -512,12 +661,31 @@ class _VectorCanvasWidgetState extends State<VectorCanvasWidget> {
             ],
           ),
         ),
+        PopupMenuItem<String>(
+          value: 'group',
+          child: Row(
+            children: [
+              const Icon(Icons.layers_outlined, color: Color(0xFF8B5CF6), size: 20),
+              const SizedBox(width: 12),
+              Text(
+                'Add Sub-Canvas',
+                style: GoogleFonts.outfit(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF0F172A),
+                ),
+              ),
+            ],
+          ),
+        ),
       ],
     ).then((value) {
       if (value == 'text') {
         _spawnTextboxAt(context, scenePos);
       } else if (value == 'photo') {
         _pickAndAddPhotoAt(context, scenePos);
+      } else if (value == 'group') {
+        _spawnCanvasGroupAt(context, scenePos);
       }
     });
   }
@@ -529,6 +697,11 @@ class _VectorCanvasWidgetState extends State<VectorCanvasWidget> {
     setState(() {
       _editingElementId = generatedId;
     });
+  }
+
+  void _spawnCanvasGroupAt(BuildContext context, Offset scenePos) {
+    final scale = _transformationController.value.getMaxScaleOnAxis();
+    context.read<VectorEditorBloc>().add(AddCanvasGroup(scenePos, scale: scale));
   }
 
   Future<void> _pickAndAddPhotoAt(BuildContext context, Offset scenePos) async {
@@ -553,5 +726,82 @@ class _VectorCanvasWidgetState extends State<VectorCanvasWidget> {
         const SnackBar(content: Text('Photo added to canvas!')),
       );
     }
+  }
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  VectorCanvasGroup? _findGroupAt(Offset pos, List<VectorElement> elements) {
+    for (final elem in elements.reversed) {
+      if (elem is VectorCanvasGroup) {
+        final rect = Rect.fromLTWH(elem.position.dx, elem.position.dy, elem.size.width, elem.size.height);
+        if (rect.contains(pos)) {
+          return elem;
+        }
+      }
+    }
+    return null;
+  }
+
+  VectorElement? _findElementById(String id, List<VectorElement> tree) {
+    for (final elem in tree) {
+      if (elem.id == id) {
+        return elem;
+      }
+      if (elem is VectorCanvasGroup) {
+        final found = _findElementById(id, elem.children);
+        if (found != null) return found;
+      }
+    }
+    return null;
+  }
+
+  VectorCanvasGroup? _findParentGroupOf(String id, List<VectorElement> tree) {
+    for (final elem in tree) {
+      if (elem is VectorCanvasGroup) {
+        if (elem.children.any((child) => child.id == id)) {
+          return elem;
+        }
+        final found = _findParentGroupOf(id, elem.children);
+        if (found != null) return found;
+      }
+    }
+    return null;
+  }
+
+  Offset _getElementAbsolutePosition(VectorElement elem, List<VectorElement> tree) {
+    if (elem.parentGroupId == null) return elem.position;
+    final parent = _findParentGroupOf(elem.parentGroupId!, tree);
+    if (parent == null) return elem.position;
+    return _getElementAbsolutePosition(parent, tree) + elem.position * parent.scale;
+  }
+
+  double _getElementAbsoluteScale(VectorElement elem, List<VectorElement> tree) {
+    if (elem.parentGroupId == null) return elem.scale;
+    final parent = _findParentGroupOf(elem.parentGroupId!, tree);
+    if (parent == null) return elem.scale;
+    return _getElementAbsoluteScale(parent, tree) * elem.scale;
+  }
+
+  VectorElement _toAbsoluteElement(VectorElement elem, List<VectorElement> tree) {
+    final absPos = _getElementAbsolutePosition(elem, tree);
+    final absScale = _getElementAbsoluteScale(elem, tree);
+    if (elem is VectorTextElement) {
+      return elem.copyWith(
+        position: absPos,
+        size: elem.size * absScale,
+        fontSize: elem.fontSize * absScale,
+      );
+    } else if (elem is VectorPhotoElement) {
+      return elem.copyWith(
+        position: absPos,
+        size: elem.size * absScale,
+      );
+    } else if (elem is VectorCanvasGroup) {
+      return elem.copyWith(
+        position: absPos,
+        size: elem.size * absScale,
+      );
+    }
+    return elem.copyWith(position: absPos, scale: absScale);
   }
 }
